@@ -23,29 +23,38 @@ fields_to_fill = {
     "Salmonella": "",
 }
 
-# FPDF class to replicate the table structure
-class CustomPDF(FPDF):
+# FPDF class to replicate the document layout
+class COAPDF(FPDF):
     def header(self):
-        self.set_font("Arial", "B", 14)
+        self.set_font("Arial", "B", 16)
         self.cell(0, 10, "Certificate of Analysis", align="C", ln=True)
-        self.ln(5)
+        self.ln(10)
 
-    def add_table_row(self, parameter, specification, test_result):
+    def add_static_field(self, label, value=""):
+        """Add a static field with a label and value."""
         self.set_font("Arial", size=12)
-        self.cell(70, 10, parameter, border=1)
-        self.cell(60, 10, specification, border=1)
-        self.cell(60, 10, test_result, border=1, ln=True)
+        self.cell(50, 10, f"{label}:", border=0)
+        self.cell(0, 10, value, border=0, ln=True)
 
-    def add_section(self, title):
+    def add_table_header(self, col1, col2, col3):
+        """Add the header row for a table."""
         self.set_font("Arial", "B", 12)
-        self.cell(0, 10, title, ln=True)
-        self.ln(5)
+        self.cell(70, 10, col1, border=1, align="C")
+        self.cell(60, 10, col2, border=1, align="C")
+        self.cell(60, 10, col3, border=1, align="C", ln=True)
+
+    def add_table_row(self, col1, col2, col3):
+        """Add a data row to the table."""
+        self.set_font("Arial", size=12)
+        self.cell(70, 10, col1, border=1)
+        self.cell(60, 10, col2, border=1)
+        self.cell(60, 10, col3, border=1, ln=True)
 
 def create_pdf(data):
-    pdf = CustomPDF()
+    pdf = COAPDF()
     pdf.add_page()
 
-    # Static header details
+    # Add non-tabular static fields (header details)
     header_data = {
         "Customer": "",
         "Product": "",
@@ -56,15 +65,15 @@ def create_pdf(data):
         "PO No.": "",
     }
 
-    pdf.set_font("Arial", size=12)
     for key, value in header_data.items():
-        pdf.cell(50, 10, f"{key}: {value}", ln=True)
-    pdf.ln(10)
+        pdf.add_static_field(key, value)
 
-    # Add sections
-    pdf.add_section("PARAMETERS SPECIFICATIONS TEST RESULTS")
+    pdf.ln(10)  # Add spacing
 
-    # Parameters section
+    # Add table header
+    pdf.add_table_header("PARAMETERS", "SPECIFICATIONS", "TEST RESULTS")
+
+    # Table data for "Fill" fields
     table_data = [
         ("Gum Content (%)", "more than 80%", data["Gum Content (%)"]),
         ("Moisture (%)", "less than 12%", data["Moisture (%)"]),
@@ -93,7 +102,7 @@ def create_pdf(data):
 
 # Streamlit app
 st.title("Certificate of Analysis Generator")
-st.write("Fill in the required details below (only fields marked 'Fill' in the original):")
+st.write("Fill in the required fields below (only fields marked 'Fill' in the original):")
 
 # Collect user inputs for the "Fill" fields
 user_inputs = {}
