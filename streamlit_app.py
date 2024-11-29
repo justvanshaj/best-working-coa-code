@@ -1,5 +1,6 @@
 import streamlit as st
 from fpdf import FPDF
+from io import BytesIO
 
 # Define the structure of the form
 fields = {
@@ -40,7 +41,11 @@ def create_pdf(data):
     for key, value in data.items():
         pdf.cell(0, 10, f"{key}: {value}", ln=True)
 
-    return pdf
+    # Save PDF to memory buffer
+    pdf_buffer = BytesIO()
+    pdf.output(pdf_buffer)
+    pdf_buffer.seek(0)
+    return pdf_buffer
 
 # Streamlit form for user input
 st.title("Food COA Form")
@@ -51,13 +56,11 @@ for field in fields:
     user_inputs[field] = st.text_input(field, placeholder=f"Enter {field}...")
 
 if st.button("Generate PDF"):
-    pdf = create_pdf(user_inputs)
-    pdf_output_path = "/mnt/data/COA_Food.pdf"
-    pdf.output(pdf_output_path)
+    pdf_buffer = create_pdf(user_inputs)
     st.success("PDF generated successfully!")
     st.download_button(
         label="Download PDF",
-        data=open(pdf_output_path, "rb").read(),
+        data=pdf_buffer,
         file_name="COA_Food.pdf",
         mime="application/pdf",
     )
