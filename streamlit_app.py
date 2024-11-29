@@ -32,32 +32,26 @@ fields_to_fill = {
 
 # Custom PDF Class
 class COAPDF(FPDF):
-    def header(self):
-        self.set_font("Arial", "B", 16)
-        self.cell(0, 10, "Certificate of Analysis", align="C", ln=True)
-        self.ln(10)
-
-    def add_field(self, label, value):
-        self.set_font("Arial", size=12)
-        self.cell(40, 10, f"{label}:", border=0)
-        self.cell(0, 10, value, border=0, ln=True)
-
-    def add_table_row(self, col1, col2, col3):
+    def add_table_row(self, col1, col2, col3=None):
+        """Add a row to the table."""
         self.set_font("Arial", size=12)
         self.cell(70, 10, col1, border=1)
-        self.cell(60, 10, col2, border=1)
-        self.cell(60, 10, col3, border=1, ln=True)
+        self.cell(70, 10, col2, border=1)
+        if col3 is not None:
+            self.cell(50, 10, col3, border=1)
+        self.ln()
 
     def add_section_title(self, title):
+        """Add a section title in the table."""
         self.set_font("Arial", "B", 12)
-        self.cell(0, 10, title, ln=True)
-        self.ln(5)
+        self.cell(0, 10, title, border=1, align="C", ln=True)
 
 def create_pdf(data):
     pdf = COAPDF()
     pdf.add_page()
 
-    # Add header fields
+    # Add header fields as rows in the table
+    pdf.add_section_title("General Information")
     header_data = {
         "Customer": data["Customer"],
         "Product": data["Product"],
@@ -68,24 +62,24 @@ def create_pdf(data):
         "PO No.": data["PO No."],
     }
     for key, value in header_data.items():
-        pdf.add_field(key, value)
+        pdf.add_table_row(key, value)
 
-    pdf.ln(10)  # Spacing before the Organoleptic Analysis section
+    pdf.ln(5)  # Add spacing between sections
 
     # Add Organoleptic Analysis section
-    pdf.add_section_title("ORGANOLEPTIC ANALYSIS")
+    pdf.add_section_title("Organoleptic Analysis")
     organoleptic_data = [
         ("Appearance/Colour", "Cream/White Powder"),
         ("Odour", "Natural"),
         ("Taste", "Natural"),
     ]
     for parameter, value in organoleptic_data:
-        pdf.add_field(parameter, value)
+        pdf.add_table_row(parameter, value)
 
-    pdf.ln(10)  # Spacing before the Parameters Table
+    pdf.ln(5)  # Add spacing between sections
 
     # Add Parameters Table
-    pdf.add_section_title("PARAMETERS SPECIFICATIONS TEST RESULTS")
+    pdf.add_section_title("Parameters Specifications and Results")
     table_data = [
         ("Gum Content (%)", "more than 80%", data["Gum Content (%)"]),
         ("Moisture (%)", "less than 12%", data["Moisture (%)"]),
