@@ -2,15 +2,8 @@ import streamlit as st
 from fpdf import FPDF
 from io import BytesIO
 
-# Define the structure of the form with fields
-fields = {
-    "Customer": "",
-    "Product": "",
-    "Date": "",
-    "Batch No.": "",
-    "Shelf-life": "",
-    "Invoice No.": "",
-    "PO No.": "",
+# Define the fields to be filled by the user
+fields_to_fill = {
     "Gum Content (%)": "",
     "Moisture (%)": "",
     "Protein (%)": "",
@@ -30,45 +23,76 @@ fields = {
     "Salmonella": "",
 }
 
+# FPDF class to format the PDF exactly like the original
 class CustomPDF(FPDF):
     def header(self):
-        self.set_font("Arial", "B", 14)
+        self.set_font("Arial", "B", 16)
         self.cell(0, 10, "Certificate of Analysis", align="C", ln=True)
-        self.ln(5)
+        self.ln(10)
 
-    def add_row(self, label, value):
+    def add_static_row(self, label, value=""):
         self.set_font("Arial", size=12)
-        self.cell(50, 10, f"{label}:", border=1)
-        self.cell(0, 10, value, border=1, ln=True)
+        self.cell(50, 10, f"{label}:", border=0)
+        self.cell(0, 10, value, border=0, ln=True)
+
+    def add_fillable_row(self, label, value):
+        self.set_font("Arial", size=12)
+        self.cell(50, 10, f"{label}:", border=0)
+        self.cell(0, 10, value, border=0, ln=True)
+
+    def add_section(self, section_title):
+        self.set_font("Arial", "B", 14)
+        self.cell(0, 10, section_title, border=0, ln=True)
+        self.ln(5)
 
 def create_pdf(data):
     pdf = CustomPDF()
     pdf.add_page()
 
-    # Add data in rows
-    for key, value in data.items():
-        pdf.add_row(key, value)
+    # Static fields (unchanged)
+    static_fields = {
+        "Customer": "",
+        "Product": "",
+        "Date": "",
+        "Batch No.": "",
+        "Shelf-life": "",
+        "Invoice No.": "",
+        "PO No.": "",
+    }
 
-    # Save to buffer
-    pdf_buffer = BytesIO()
-    pdf.output(pdf_buffer)
-    pdf_buffer.seek(0)
-    return pdf_buffer
+    # Add static fields
+    for key, value in static_fields.items():
+        pdf.add_static_row(key, value)
+
+    pdf.ln(5)  # Add some spacing before dynamic fields
+
+    # Fillable fields (user input replaces "Fill")
+    for key, value in data.items():
+        pdf.add_fillable_row(key, value if value else "Fill")
+
+    return pdf
 
 # Streamlit app
-st.title("Food COA Form")
-st.write("Fill in the required details below:")
+st.title("Certificate of Analysis Form")
+st.write("Fill in the required fields below:")
 
+# Collect user inputs for the fillable fields
 user_inputs = {}
-for field in fields:
+for field in fields_to_fill:
     user_inputs[field] = st.text_input(field, placeholder=f"Enter {field}...")
 
 if st.button("Generate PDF"):
-    pdf_buffer = create_pdf(user_inputs)
+    pdf = create_pdf(user_inputs)
+
+    # Save the PDF to a buffer for download
+    pdf_buffer = BytesIO()
+    pdf.output(pdf_buffer)
+    pdf_buffer.seek(0)
+
     st.success("PDF generated successfully!")
     st.download_button(
         label="Download PDF",
         data=pdf_buffer,
-        file_name="COA_Food.pdf",
+        file_name="COA_Food_Filled.pdf",
         mime="application/pdf",
     )
