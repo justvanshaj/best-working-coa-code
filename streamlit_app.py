@@ -2,7 +2,7 @@ import streamlit as st
 from fpdf import FPDF
 from io import BytesIO
 
-# Define the structure of the form
+# Define the structure of the form with fields
 fields = {
     "Customer": "",
     "Product": "",
@@ -30,24 +30,32 @@ fields = {
     "Salmonella": "",
 }
 
+class CustomPDF(FPDF):
+    def header(self):
+        self.set_font("Arial", "B", 14)
+        self.cell(0, 10, "Certificate of Analysis", align="C", ln=True)
+        self.ln(5)
+
+    def add_row(self, label, value):
+        self.set_font("Arial", size=12)
+        self.cell(50, 10, f"{label}:", border=1)
+        self.cell(0, 10, value, border=1, ln=True)
+
 def create_pdf(data):
-    pdf = FPDF()
+    pdf = CustomPDF()
     pdf.add_page()
-    pdf.set_font("Arial", size=12)
 
-    pdf.cell(200, 10, txt="Certificate of Analysis", ln=True, align='C')
-    pdf.ln(10)
-
+    # Add data in rows
     for key, value in data.items():
-        pdf.cell(0, 10, f"{key}: {value}", ln=True)
+        pdf.add_row(key, value)
 
-    # Save PDF to memory buffer
+    # Save to buffer
     pdf_buffer = BytesIO()
     pdf.output(pdf_buffer)
     pdf_buffer.seek(0)
     return pdf_buffer
 
-# Streamlit form for user input
+# Streamlit app
 st.title("Food COA Form")
 st.write("Fill in the required details below:")
 
