@@ -2,8 +2,15 @@ import streamlit as st
 from fpdf import FPDF
 from io import BytesIO
 
-# Define the fields that need to be filled by the user
+# Define the fields for user input
 fields_to_fill = {
+    "Customer": "",
+    "Product": "",
+    "Date": "",
+    "Batch No.": "",
+    "Shelf-life": "",
+    "Invoice No.": "",
+    "PO No.": "",
     "Gum Content (%)": "",
     "Moisture (%)": "",
     "Protein (%)": "",
@@ -23,29 +30,25 @@ fields_to_fill = {
     "Salmonella": "",
 }
 
-# Custom FPDF class to replicate the document structure
+# Custom PDF Class
 class COAPDF(FPDF):
     def header(self):
-        # Title at the top of the page
         self.set_font("Arial", "B", 16)
         self.cell(0, 10, "Certificate of Analysis", align="C", ln=True)
         self.ln(10)
 
     def add_field(self, label, value):
-        """Add a single-line field with a label and value."""
         self.set_font("Arial", size=12)
         self.cell(40, 10, f"{label}:", border=0)
         self.cell(0, 10, value, border=0, ln=True)
 
     def add_table_row(self, col1, col2, col3):
-        """Add a row to the parameters table."""
         self.set_font("Arial", size=12)
         self.cell(70, 10, col1, border=1)
         self.cell(60, 10, col2, border=1)
         self.cell(60, 10, col3, border=1, ln=True)
 
     def add_section_title(self, title):
-        """Add a section title with some spacing."""
         self.set_font("Arial", "B", 12)
         self.cell(0, 10, title, ln=True)
         self.ln(5)
@@ -54,21 +57,20 @@ def create_pdf(data):
     pdf = COAPDF()
     pdf.add_page()
 
-    # Add static header fields
+    # Add header fields
     header_data = {
-        "Customer": "",
-        "Product": "",
-        "Date": "",
-        "Batch No.": "",
-        "Shelf-life": "",
-        "Invoice No.": "",
-        "PO No.": "",
+        "Customer": data["Customer"],
+        "Product": data["Product"],
+        "Date": data["Date"],
+        "Batch No.": data["Batch No."],
+        "Shelf-life": data["Shelf-life"],
+        "Invoice No.": data["Invoice No."],
+        "PO No.": data["PO No."],
     }
-
     for key, value in header_data.items():
         pdf.add_field(key, value)
 
-    pdf.ln(10)  # Add some spacing
+    pdf.ln(10)  # Spacing before the table
 
     # Add table section
     pdf.add_section_title("PARAMETERS SPECIFICATIONS TEST RESULTS")
@@ -91,20 +93,17 @@ def create_pdf(data):
         ("Ecoli", "Negative", data["Ecoli"]),
         ("Salmonella", "Negative", data["Salmonella"]),
     ]
-
     for row in table_data:
         pdf.add_table_row(*row)
 
     return pdf
 
-# Streamlit app
+# Streamlit App
 st.title("Certificate of Analysis Generator")
-st.write("Fill in the required fields below:")
+st.write("Fill in the fields below to generate a COA PDF:")
 
-# Collect user inputs for the "Fill" fields
-user_inputs = {}
-for field in fields_to_fill:
-    user_inputs[field] = st.text_input(field, placeholder=f"Enter {field}...")
+# Collect user inputs
+user_inputs = {field: st.text_input(field, placeholder=f"Enter {field}...") for field in fields_to_fill}
 
 if st.button("Generate PDF"):
     pdf = create_pdf(user_inputs)
