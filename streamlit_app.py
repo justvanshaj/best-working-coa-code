@@ -91,15 +91,31 @@ def create_pdf(data):
         ("Arsenic", "less than 3.0 mg/kg", data["Arsenic"]),
         ("Lead", "less than 2.0 mg/kg", data["Lead"]),
         ("Heavy Metals", "less than 1.0 mg/kg", data["Heavy Metals"]),
+    ]
+    for row in table_data:
+        pdf.add_table_row(*row)
+
+    # Add Particle Size and Granulation section
+    pdf.ln(5)  # Spacing before the new section
+    pdf.add_section_title("Particle Size and Granulation")
+    granulation_data = [
         ("Through 100 Mesh", "99%", data["Through 100 Mesh"]),
         ("Through 200 Mesh", "95%-99%", data["Through 200 Mesh"]),
+    ]
+    for row in granulation_data:
+        pdf.add_table_row(*row)
+
+    # Add Microbiological Analysis
+    pdf.ln(5)  # Add spacing
+    pdf.add_section_title("Microbiological Analysis")
+    microbiological_data = [
         ("APC/gm", "less than 5000/gm", data["APC/gm"]),
         ("Yeast & Mould", "less than 500/gm", data["Yeast & Mould"]),
         ("Coliform", "Negative", data["Coliform"]),
         ("Ecoli", "Negative", data["Ecoli"]),
         ("Salmonella", "Negative", data["Salmonella"]),
     ]
-    for row in table_data:
+    for row in microbiological_data:
         pdf.add_table_row(*row)
 
     return pdf
