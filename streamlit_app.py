@@ -1,3 +1,58 @@
+import streamlit as st
+from fpdf import FPDF
+from io import BytesIO
+
+# Define the fields for user input
+fields_to_fill = {
+    "Customer": "",
+    "Product": "",
+    "Date": "",
+    "Batch No.": "",
+    "Shelf-life": "",
+    "Invoice No.": "",
+    "PO No.": "",
+    "Gum Content (%)": "",
+    "Moisture (%)": "",
+    "Protein (%)": "",
+    "ASH Content (%)": "",
+    "AIR (%)": "",
+    "Fat (%)": "",
+    "Ph Levels": "",
+    "Arsenic": "",
+    "Lead": "",
+    "Heavy Metals": "",
+    "Through 100 Mesh": "",
+    "Through 200 Mesh": "",
+    "APC/gm": "",
+    "Yeast & Mould": "",
+    "Coliform": "",
+    "Ecoli": "",
+    "Salmonella": "",
+}
+
+# Custom PDF Class
+class COAPDF(FPDF):
+    def header(self):
+        self.set_font("Arial", "B", 16)
+        self.cell(0, 10, "Certificate of Analysis", align="C", ln=True)
+        self.ln(10)
+
+    def add_field(self, label, value):
+        self.set_font("Arial", size=12)
+        self.cell(40, 10, f"{label}:", border=0)
+        self.cell(0, 10, value, border=0, ln=True)
+
+    def add_table_row(self, col1, col2, col3):
+        self.set_font("Arial", size=12)
+        self.cell(70, 10, col1, border=1)
+        self.cell(60, 10, col2, border=1)
+        self.cell(60, 10, col3, border=1, ln=True)
+
+    def add_section_title(self, title):
+        self.set_font("Arial", "B", 12)
+        self.cell(0, 10, title, ln=True)
+        self.ln(5)
+
 def create_pdf(data):
     pdf = COAPDF()
     pdf.add_page()
@@ -54,3 +109,26 @@ def create_pdf(data):
         pdf.add_table_row(*row)
 
     return pdf
+
+# Streamlit App
+st.title("Certificate of Analysis Generator")
+st.write("Fill in the fields below to generate a COA PDF:")
+
+# Collect user inputs
+user_inputs = {field: st.text_input(field, placeholder=f"Enter {field}...") for field in fields_to_fill}
+
+if st.button("Generate PDF"):
+    pdf = create_pdf(user_inputs)
+
+    # Save PDF to buffer
+    pdf_buffer = BytesIO()
+    pdf.output(pdf_buffer)
+    pdf_buffer.seek(0)
+
+    st.success("PDF generated successfully!")
+    st.download_button(
+        label="Download PDF",
+        data=pdf_buffer,
+        file_name="COA_Food_Filled.pdf",
+        mime="application/pdf",
+    )
