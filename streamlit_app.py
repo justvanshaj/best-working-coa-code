@@ -53,7 +53,7 @@ def create_pdf(data):
     pdf.add_page()
 
     # Header Rows
-    pdf.set_font("Arial", size=12)
+    pdf.set_font("Arial", size=8)
     pdf.cell(0, 10, f"Customer: {data['Customer']}", border=1, ln=True)
 
     pdf.cell(70, 10, f"Product: {data['Product']}", border=1)
