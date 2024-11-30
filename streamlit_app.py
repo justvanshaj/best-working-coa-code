@@ -28,6 +28,8 @@ fields_to_fill = {
     "Coliform": "",
     "Ecoli": "",
     "Salmonella": "",
+    "Viscosity After 2 Hours": "",
+    "Viscosity After 24 Hours": "",
 }
 
 # Custom PDF Class
@@ -50,27 +52,22 @@ def create_pdf(data):
     pdf = COAPDF()
     pdf.add_page()
 
-    # Header Rows with Table Borders
+    # Header Rows
     pdf.set_font("Arial", size=12)
-
-    # Customer row (single column, full width with border)
     pdf.cell(0, 10, f"Customer: {data['Customer']}", border=1, ln=True)
 
-    # Product and Date in two columns with border
     pdf.cell(70, 10, f"Product: {data['Product']}", border=1)
     pdf.cell(70, 10, f"Date: {data['Date']}", border=1, ln=True)
 
-    # Batch No. and Shelf-life in two columns with border
     pdf.cell(70, 10, f"Batch No.: {data['Batch No.']}", border=1)
     pdf.cell(70, 10, f"Shelf-life: {data['Shelf-life']}", border=1, ln=True)
 
-    # Invoice No. and PO No. in two columns with border
     pdf.cell(70, 10, f"Invoice No.: {data['Invoice No.']}", border=1)
     pdf.cell(70, 10, f"PO No.: {data['PO No.']}", border=1, ln=True)
 
-    pdf.ln(5)  # Spacing before the next section
+    pdf.ln(5)
 
-    # Add Parameters Specifications and Results
+    # Parameters Specifications and Results
     pdf.add_section_title("Parameters Specifications and Results")
     table_data = [
         ("Gum Content (%)", "more than 80%", data["Gum Content (%)"]),
@@ -87,9 +84,9 @@ def create_pdf(data):
     for row in table_data:
         pdf.add_table_row(*row)
 
-    pdf.ln(5)  # Add spacing between sections
+    pdf.ln(5)
 
-    # Add Organoleptic Analysis section
+    # Organoleptic Analysis
     pdf.add_section_title("Organoleptic Analysis")
     organoleptic_data = [
         ("Appearance/Colour", "Cream/White Powder"),
@@ -99,9 +96,9 @@ def create_pdf(data):
     for parameter, value in organoleptic_data:
         pdf.add_table_row(parameter, value)
 
-    pdf.ln(5)  # Add spacing between sections
+    pdf.ln(5)
 
-    # Add Particle Size and Granulation section
+    # Particle Size and Granulation
     pdf.add_section_title("Particle Size and Granulation")
     granulation_data = [
         ("Through 100 Mesh", "99%", data["Through 100 Mesh"]),
@@ -110,8 +107,16 @@ def create_pdf(data):
     for row in granulation_data:
         pdf.add_table_row(*row)
 
-    # Add Microbiological Analysis
-    pdf.ln(5)  # Add spacing
+    pdf.ln(5)
+
+    # Viscosity Section
+    pdf.add_section_title("Viscosity")
+    pdf.add_table_row("After 2 Hours", "≥ BLANK cps", data["Viscosity After 2 Hours"])
+    pdf.add_table_row("After 24 Hours", "≤ BLANK cps", data["Viscosity After 24 Hours"])
+
+    pdf.ln(5)
+
+    # Microbiological Analysis
     pdf.add_section_title("Microbiological Analysis")
     microbiological_data = [
         ("APC/gm", "less than 5000/gm", data["APC/gm"]),
