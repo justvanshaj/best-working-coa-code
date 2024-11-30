@@ -41,30 +41,27 @@ class COAPDF(FPDF):
             self.cell(50, 10, col3, border=1)
         self.ln()
 
-    def add_section_title(self, title):
-        """Add a section title in the table."""
-        self.set_font("Arial", "B", 12)
-        self.cell(0, 10, title, border=1, align="C", ln=True)
+    def add_double_column_row(self, col1_label, col1_value, col2_label, col2_value):
+        """Add a two-column row for metadata."""
+        self.set_font("Arial", size=12)
+        self.cell(50, 10, f"{col1_label}:", border=0)
+        self.cell(50, 10, col1_value, border=0)
+        self.cell(50, 10, f"{col2_label}:", border=0)
+        self.cell(50, 10, col2_value, border=0, ln=True)
 
 def create_pdf(data):
     pdf = COAPDF()
     pdf.add_page()
 
-    # Add header fields as rows in the table
-    pdf.add_section_title("General Information")
-    header_data = {
-        "Customer": data["Customer"],
-        "Product": data["Product"],
-        "Date": data["Date"],
-        "Batch No.": data["Batch No."],
-        "Shelf-life": data["Shelf-life"],
-        "Invoice No.": data["Invoice No."],
-        "PO No.": data["PO No."],
-    }
-    for key, value in header_data.items():
-        pdf.add_table_row(key, value)
+    # Header Rows
+    pdf.set_font("Arial", size=12)
+    pdf.cell(0, 10, f"Customer: {data['Customer']}", ln=True)
 
-    pdf.ln(5)  # Add spacing between sections
+    pdf.add_double_column_row("Product", data["Product"], "Date", data["Date"])
+    pdf.add_double_column_row("Batch No.", data["Batch No."], "Shelf-life", data["Shelf-life"])
+    pdf.add_double_column_row("Invoice No.", data["Invoice No."], "PO No.", data["PO No."])
+
+    pdf.ln(10)  # Spacing before next section
 
     # Add Organoleptic Analysis section
     pdf.add_section_title("Organoleptic Analysis")
