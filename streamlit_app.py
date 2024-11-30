@@ -41,14 +41,6 @@ class COAPDF(FPDF):
             self.cell(50, 10, col3, border=1)
         self.ln()
 
-    def add_double_column_row(self, col1_label, col1_value, col2_label, col2_value):
-        """Add a two-column row for metadata."""
-        self.set_font("Arial", size=12)
-        self.cell(50, 10, f"{col1_label}:", border=0)
-        self.cell(50, 10, col1_value, border=0)
-        self.cell(50, 10, f"{col2_label}:", border=0)
-        self.cell(50, 10, col2_value, border=0, ln=True)
-
     def add_section_title(self, title):
         """Add a section title with a centered header in the table."""
         self.set_font("Arial", "B", 12)
@@ -58,15 +50,25 @@ def create_pdf(data):
     pdf = COAPDF()
     pdf.add_page()
 
-    # Header Rows
+    # Header Rows with Table Borders
     pdf.set_font("Arial", size=12)
-    pdf.cell(0, 10, f"Customer: {data['Customer']}", ln=True)
 
-    pdf.add_double_column_row("Product", data["Product"], "Date", data["Date"])
-    pdf.add_double_column_row("Batch No.", data["Batch No."], "Shelf-life", data["Shelf-life"])
-    pdf.add_double_column_row("Invoice No.", data["Invoice No."], "PO No.", data["PO No."])
+    # Customer row (single column, full width with border)
+    pdf.cell(0, 10, f"Customer: {data['Customer']}", border=1, ln=True)
 
-    pdf.ln(10)  # Spacing before next section
+    # Product and Date in two columns with border
+    pdf.cell(70, 10, f"Product: {data['Product']}", border=1)
+    pdf.cell(70, 10, f"Date: {data['Date']}", border=1, ln=True)
+
+    # Batch No. and Shelf-life in two columns with border
+    pdf.cell(70, 10, f"Batch No.: {data['Batch No.']}", border=1)
+    pdf.cell(70, 10, f"Shelf-life: {data['Shelf-life']}", border=1, ln=True)
+
+    # Invoice No. and PO No. in two columns with border
+    pdf.cell(70, 10, f"Invoice No.: {data['Invoice No.']}", border=1)
+    pdf.cell(70, 10, f"PO No.: {data['PO No.']}", border=1, ln=True)
+
+    pdf.ln(10)  # Spacing before the next section
 
     # Add Organoleptic Analysis section
     pdf.add_section_title("Organoleptic Analysis")
