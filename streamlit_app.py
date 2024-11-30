@@ -36,7 +36,7 @@ fields_to_fill = {
 class COAPDF(FPDF):
     def add_table_row(self, col1, col2, col3=None):
         """Add a row to the table."""
-        self.set_font("Arial", size=12)
+        self.set_font("Arial", size=8)  # Set font size to 8
         self.cell(70, 10, col1, border=1)
         self.cell(70, 10, col2, border=1)
         if col3 is not None:
@@ -45,7 +45,7 @@ class COAPDF(FPDF):
 
     def add_section_title(self, title):
         """Add a section title with a centered header in the table."""
-        self.set_font("Arial", "B", 12)
+        self.set_font("Arial", "B", 8)  # Set font size to 8 for section titles
         self.cell(0, 10, title, border=1, align="C", ln=True)
 
 def create_pdf(data):
@@ -53,7 +53,7 @@ def create_pdf(data):
     pdf.add_page()
 
     # Header Rows
-    pdf.set_font("Arial", size=8)
+    pdf.set_font("Arial", size=8)  # Set font size to 8 for header
     pdf.cell(0, 10, f"Customer: {data['Customer']}", border=1, ln=True)
 
     pdf.cell(70, 10, f"Product: {data['Product']}", border=1)
