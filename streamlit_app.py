@@ -109,10 +109,10 @@ def create_pdf(data):
 
     pdf.ln(5)
 
-    # Viscosity Section - Fixing Unicode Characters
+    # Viscosity Section with User Input
     pdf.add_section_title("VISCOSITY")
-    pdf.add_table_row("After 2 hours", ">= BLANK cps", data["Viscosity After 2 Hours"])  # Replaced ≥ with >=
-    pdf.add_table_row("After 24 hours", "<= BLANK cps", data["Viscosity After 24 Hours"])  # Replaced ≤ with <=
+    pdf.add_table_row("After 2 hours", ">= BLANK cps", data["Viscosity After 2 Hours"])  # User input for 2 hours
+    pdf.add_table_row("After 24 hours", "<= BLANK cps", data["Viscosity After 24 Hours"])  # User input for 24 hours
 
     pdf.ln(5)
 
@@ -134,7 +134,7 @@ def create_pdf(data):
 st.title("Certificate of Analysis Generator")
 st.write("Fill in the fields below to generate a COA PDF:")
 
-# Collect user inputs
+# Collect user inputs, including for viscosity
 user_inputs = {field: st.text_input(field, placeholder=f"Enter {field}...") for field in fields_to_fill}
 
 if st.button("Generate PDF"):
