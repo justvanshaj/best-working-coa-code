@@ -52,7 +52,7 @@ def create_pdf(data):
     pdf = COAPDF()
     pdf.add_page()
 
-    # Header Section
+    # Header Rows
     pdf.set_font("Arial", size=12)
     pdf.cell(0, 10, f"Customer: {data['Customer']}", border=1, ln=True)
 
@@ -67,7 +67,7 @@ def create_pdf(data):
 
     pdf.ln(5)  # Spacing before the next section
 
-    # Parameters Specifications and Results Table
+    # Parameters Specifications and Results
     pdf.add_section_title("PARAMETERS SPECIFICATIONS TEST RESULTS")
     table_data = [
         ("Gum Content (%)", "more than 80%", data["Gum Content (%)"]),
@@ -109,10 +109,10 @@ def create_pdf(data):
 
     pdf.ln(5)
 
-    # Viscosity Section
+    # Viscosity Section - Fixing Unicode Characters
     pdf.add_section_title("VISCOSITY")
-    pdf.add_table_row("After 2 hours", "≥ BLANK cps", data["Viscosity After 2 Hours"])
-    pdf.add_table_row("After 24 hours", "≤ BLANK cps", data["Viscosity After 24 Hours"])
+    pdf.add_table_row("After 2 hours", ">= BLANK cps", data["Viscosity After 2 Hours"])  # Replaced ≥ with >=
+    pdf.add_table_row("After 24 hours", "<= BLANK cps", data["Viscosity After 24 Hours"])  # Replaced ≤ with <=
 
     pdf.ln(5)
 
