@@ -52,7 +52,7 @@ def create_pdf(data):
     pdf = COAPDF()
     pdf.add_page()
 
-    # Header Rows
+    # Header Section
     pdf.set_font("Arial", size=12)
     pdf.cell(0, 10, f"Customer: {data['Customer']}", border=1, ln=True)
 
@@ -65,10 +65,10 @@ def create_pdf(data):
     pdf.cell(70, 10, f"Invoice No.: {data['Invoice No.']}", border=1)
     pdf.cell(70, 10, f"PO No.: {data['PO No.']}", border=1, ln=True)
 
-    pdf.ln(5)
+    pdf.ln(5)  # Spacing before the next section
 
-    # Parameters Specifications and Results
-    pdf.add_section_title("Parameters Specifications and Results")
+    # Parameters Specifications and Results Table
+    pdf.add_section_title("PARAMETERS SPECIFICATIONS TEST RESULTS")
     table_data = [
         ("Gum Content (%)", "more than 80%", data["Gum Content (%)"]),
         ("Moisture (%)", "less than 12%", data["Moisture (%)"]),
@@ -86,8 +86,8 @@ def create_pdf(data):
 
     pdf.ln(5)
 
-    # Organoleptic Analysis
-    pdf.add_section_title("Organoleptic Analysis")
+    # Organoleptic Analysis Section
+    pdf.add_section_title("ORGANOLEPTIC ANALYSIS")
     organoleptic_data = [
         ("Appearance/Colour", "Cream/White Powder"),
         ("Odour", "Natural"),
@@ -98,8 +98,8 @@ def create_pdf(data):
 
     pdf.ln(5)
 
-    # Particle Size and Granulation
-    pdf.add_section_title("Particle Size and Granulation")
+    # Particle Size and Granulation Section
+    pdf.add_section_title("PARTICLE SIZE AND GRANULATION")
     granulation_data = [
         ("Through 100 Mesh", "99%", data["Through 100 Mesh"]),
         ("Through 200 Mesh", "95%-99%", data["Through 200 Mesh"]),
@@ -110,14 +110,14 @@ def create_pdf(data):
     pdf.ln(5)
 
     # Viscosity Section
-    pdf.add_section_title("Viscosity")
-    pdf.add_table_row("After 2 Hours", ">= BLANK cps", data["Viscosity After 2 Hours"])
-    pdf.add_table_row("After 24 Hours", "<= BLANK cps", data["Viscosity After 24 Hours"])
+    pdf.add_section_title("VISCOSITY")
+    pdf.add_table_row("After 2 hours", "≥ BLANK cps", data["Viscosity After 2 Hours"])
+    pdf.add_table_row("After 24 hours", "≤ BLANK cps", data["Viscosity After 24 Hours"])
 
     pdf.ln(5)
 
-    # Microbiological Analysis
-    pdf.add_section_title("Microbiological Analysis")
+    # Microbiological Analysis Section
+    pdf.add_section_title("MICROBIOLOGICAL ANALYSIS")
     microbiological_data = [
         ("APC/gm", "less than 5000/gm", data["APC/gm"]),
         ("Yeast & Mould", "less than 500/gm", data["Yeast & Mould"]),
