@@ -111,8 +111,8 @@ def create_pdf(data):
 
     # Viscosity Section
     pdf.add_section_title("Viscosity")
-    pdf.add_table_row("After 2 Hours", "≥ BLANK cps", data["Viscosity After 2 Hours"])
-    pdf.add_table_row("After 24 Hours", "≤ BLANK cps", data["Viscosity After 24 Hours"])
+    pdf.add_table_row("After 2 Hours", ">= BLANK cps", data["Viscosity After 2 Hours"])
+    pdf.add_table_row("After 24 Hours", "<= BLANK cps", data["Viscosity After 24 Hours"])
 
     pdf.ln(5)
 
