@@ -35,16 +35,20 @@ fields_to_fill = {
 # Custom PDF Class
 class COAPDF(FPDF):
     def add_table_row(self, col1, col2, col3=None):
-        """Add a row to the table."""
-        self.set_font("Arial", size=8)  # Set font size to 8
-        self.cell(70, 10, col1, border=1)
-        self.cell(70, 10, col2, border=1)
+        """Add a row to the table with adjusted row height and column width."""
+        self.set_font("Arial", size=8)  # Set font size to 8 for smaller text
+        row_height = 6  # Reduced row height
+        col_widths = [60, 60, 50]  # Adjusted column widths to fit within the page
+
+        # Add cells with adjusted column widths
+        self.cell(col_widths[0], row_height, col1, border=1)
+        self.cell(col_widths[1], row_height, col2, border=1)
         if col3 is not None:
-            self.cell(50, 10, col3, border=1)
+            self.cell(col_widths[2], row_height, col3, border=1)
         self.ln()
 
     def add_section_title(self, title):
-        """Add a section title with a centered header in the table."""
+        """Add a section title with a centered header and small font size."""
         self.set_font("Arial", "B", 8)  # Set font size to 8 for section titles
         self.cell(0, 10, title, border=1, align="C", ln=True)
 
@@ -52,18 +56,18 @@ def create_pdf(data):
     pdf = COAPDF()
     pdf.add_page()
 
-    # Header Rows
+    # Header Rows with adjusted row height and column width
     pdf.set_font("Arial", size=8)  # Set font size to 8 for header
     pdf.cell(0, 10, f"Customer: {data['Customer']}", border=1, ln=True)
 
-    pdf.cell(70, 10, f"Product: {data['Product']}", border=1)
-    pdf.cell(70, 10, f"Date: {data['Date']}", border=1, ln=True)
+    pdf.cell(60, 6, f"Product: {data['Product']}", border=1)  # Adjusted column width
+    pdf.cell(60, 6, f"Date: {data['Date']}", border=1, ln=True)
 
-    pdf.cell(70, 10, f"Batch No.: {data['Batch No.']}", border=1)
-    pdf.cell(70, 10, f"Shelf-life: {data['Shelf-life']}", border=1, ln=True)
+    pdf.cell(60, 6, f"Batch No.: {data['Batch No.']}", border=1)
+    pdf.cell(60, 6, f"Shelf-life: {data['Shelf-life']}", border=1, ln=True)
 
-    pdf.cell(70, 10, f"Invoice No.: {data['Invoice No.']}", border=1)
-    pdf.cell(70, 10, f"PO No.: {data['PO No.']}", border=1, ln=True)
+    pdf.cell(60, 6, f"Invoice No.: {data['Invoice No.']}", border=1)
+    pdf.cell(60, 6, f"PO No.: {data['PO No.']}", border=1, ln=True)
 
     pdf.ln(5)  # Spacing before the next section
 
