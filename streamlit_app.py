@@ -68,21 +68,9 @@ def create_pdf(data):
     pdf.cell(70, 10, f"Invoice No.: {data['Invoice No.']}", border=1)
     pdf.cell(70, 10, f"PO No.: {data['PO No.']}", border=1, ln=True)
 
-    pdf.ln(10)  # Spacing before the next section
+    pdf.ln(5)  # Spacing before the next section
 
-    # Add Organoleptic Analysis section
-    pdf.add_section_title("Organoleptic Analysis")
-    organoleptic_data = [
-        ("Appearance/Colour", "Cream/White Powder"),
-        ("Odour", "Natural"),
-        ("Taste", "Natural"),
-    ]
-    for parameter, value in organoleptic_data:
-        pdf.add_table_row(parameter, value)
-
-    pdf.ln(5)  # Add spacing between sections
-
-    # Add Parameters Table
+    # Add Parameters Specifications and Results
     pdf.add_section_title("Parameters Specifications and Results")
     table_data = [
         ("Gum Content (%)", "more than 80%", data["Gum Content (%)"]),
@@ -99,8 +87,21 @@ def create_pdf(data):
     for row in table_data:
         pdf.add_table_row(*row)
 
+    pdf.ln(5)  # Add spacing between sections
+
+    # Add Organoleptic Analysis section
+    pdf.add_section_title("Organoleptic Analysis")
+    organoleptic_data = [
+        ("Appearance/Colour", "Cream/White Powder"),
+        ("Odour", "Natural"),
+        ("Taste", "Natural"),
+    ]
+    for parameter, value in organoleptic_data:
+        pdf.add_table_row(parameter, value)
+
+    pdf.ln(5)  # Add spacing between sections
+
     # Add Particle Size and Granulation section
-    pdf.ln(5)  # Spacing before the new section
     pdf.add_section_title("Particle Size and Granulation")
     granulation_data = [
         ("Through 100 Mesh", "99%", data["Through 100 Mesh"]),
