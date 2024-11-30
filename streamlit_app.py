@@ -49,6 +49,11 @@ class COAPDF(FPDF):
         self.cell(50, 10, f"{col2_label}:", border=0)
         self.cell(50, 10, col2_value, border=0, ln=True)
 
+    def add_section_title(self, title):
+        """Add a section title with a centered header in the table."""
+        self.set_font("Arial", "B", 12)
+        self.cell(0, 10, title, border=1, align="C", ln=True)
+
 def create_pdf(data):
     pdf = COAPDF()
     pdf.add_page()
