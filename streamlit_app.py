@@ -47,10 +47,10 @@ class COAPDF(FPDF):
             self.cell(col_widths[2], row_height, col3, border=1)
         self.ln()
 
-    def add_section_title(self, title):
-        """Add a section title with a centered header and small font size."""
-        self.set_font("Arial", "B", 8)  # Set font size to 8 for section titles
-        self.cell(0, 10, title, border=1, align="C", ln=True)
+    def add_section_title(self, title, font_size=8, cell_height=10):
+        """Add a section title with customizable cell size and font size."""
+        self.set_font("Arial", "B", font_size)  # Set custom font size
+        self.cell(0, cell_height, title, border=1, align="C", ln=True)
 
 def create_pdf(data):
     pdf = COAPDF()
@@ -70,7 +70,7 @@ def create_pdf(data):
     pdf.cell(60, 5, f"PO No.: {data['PO No.']}", border=1, ln=True)
 
     # Parameters Specifications and Results
-    pdf.add_section_title("PARAMETERS SPECIFICATIONS TEST RESULTS")
+    pdf.add_section_title("PARAMETERS SPECIFICATIONS TEST RESULTS", font_size=10, cell_height=12)
     table_data = [
         ("Gum Content (%)", "more than 80%", data["Gum Content (%)"]),
         ("Moisture (%)", "less than 12%", data["Moisture (%)"]),
@@ -87,7 +87,7 @@ def create_pdf(data):
         pdf.add_table_row(*row)
 
     # Organoleptic Analysis Section
-    pdf.add_section_title("ORGANOLEPTIC ANALYSIS")
+    pdf.add_section_title("ORGANOLEPTIC ANALYSIS", font_size=8, cell_height=8)
     organoleptic_data = [
         ("Appearance/Colour", "Cream/White Powder"),
         ("Odour", "Natural"),
@@ -97,7 +97,7 @@ def create_pdf(data):
         pdf.add_table_row(parameter, value)
 
     # Particle Size and Granulation Section
-    pdf.add_section_title("PARTICLE SIZE AND GRANULATION")
+    pdf.add_section_title("PARTICLE SIZE AND GRANULATION", font_size=9, cell_height=9)
     granulation_data = [
         ("Through 100 Mesh", "99%", data["Through 100 Mesh"]),
         ("Through 200 Mesh", "95%-99%", data["Through 200 Mesh"]),
@@ -106,12 +106,12 @@ def create_pdf(data):
         pdf.add_table_row(*row)
 
     # Viscosity Section with User Input
-    pdf.add_section_title("VISCOSITY")
+    pdf.add_section_title("VISCOSITY", font_size=8, cell_height=8)
     pdf.add_table_row("After 2 hours", ">= BLANK cps", data["Viscosity After 2 Hours"])  # User input for 2 hours
     pdf.add_table_row("After 24 hours", "<= BLANK cps", data["Viscosity After 24 Hours"])  # User input for 24 hours
 
     # Microbiological Analysis Section
-    pdf.add_section_title("MICROBIOLOGICAL ANALYSIS")
+    pdf.add_section_title("MICROBIOLOGICAL ANALYSIS", font_size=10, cell_height=10)
     microbiological_data = [
         ("APC/gm", "less than 5000/gm", data["APC/gm"]),
         ("Yeast & Mould", "less than 500/gm", data["Yeast & Mould"]),
