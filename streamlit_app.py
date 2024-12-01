@@ -105,7 +105,7 @@ def create_pdf(data):
         ("Through 200 Mesh", "95%-99%", data["Through 200 Mesh"]),
     ]
     for row in granulation_data:
-        pdf.add_table_row(*row, col_widths=(70, 50), row_height=5)
+        pdf.add_table_row(*row, col_widths=(50, 50), row_height=5)
 
     # Viscosity Section with User Input
     pdf.add_section_title("VISCOSITY", font_size=9, cell_height=6)
