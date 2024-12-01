@@ -70,7 +70,7 @@ def create_pdf(data):
     pdf.cell(60, 5, f"PO No.: {data['PO No.']}", border=1, ln=True)
 
     # Parameters Specifications and Results
-    pdf.add_section_title("PARAMETERS SPECIFICATIONS TEST RESULTS", font_size=8, cell_height=5)
+    pdf.add_section_title("PARAMETERS SPECIFICATIONS TEST RESULTS", font_size=8, cell_height=5, cell_width=5)
     table_data = [
         ("Gum Content (%)", "more than 80%", data["Gum Content (%)"]),
         ("Moisture (%)", "less than 12%", data["Moisture (%)"]),
