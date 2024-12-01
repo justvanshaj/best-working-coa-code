@@ -58,19 +58,19 @@ def create_pdf(data):
 
     # Header Rows with adjusted row height and column width
     pdf.set_font("Arial", size=8)  # Set font size to 8 for header
-    pdf.cell(0, 20, f"Customer: {data['Customer']}", border=1, ln=True)
+    pdf.cell(0, 5, f"Customer: {data['Customer']}", border=1, ln=True)
 
-    pdf.cell(60, 6, f"Product: {data['Product']}", border=1)  # Adjusted column width
-    pdf.cell(60, 6, f"Date: {data['Date']}", border=1, ln=True)
+    pdf.cell(60, 5, f"Product: {data['Product']}", border=1)  # Adjusted column width
+    pdf.cell(60, 5, f"Date: {data['Date']}", border=1, ln=True)
 
-    pdf.cell(60, 6, f"Batch No.: {data['Batch No.']}", border=1)
-    pdf.cell(60, 6, f"Shelf-life: {data['Shelf-life']}", border=1, ln=True)
+    pdf.cell(60, 5, f"Batch No.: {data['Batch No.']}", border=1)
+    pdf.cell(60, 5, f"Shelf-life: {data['Shelf-life']}", border=1, ln=True)
 
-    pdf.cell(60, 6, f"Invoice No.: {data['Invoice No.']}", border=1)
-    pdf.cell(60, 6, f"PO No.: {data['PO No.']}", border=1, ln=True)
+    pdf.cell(60, 5, f"Invoice No.: {data['Invoice No.']}", border=1)
+    pdf.cell(60, 5, f"PO No.: {data['PO No.']}", border=1, ln=True)
 
     # Parameters Specifications and Results
-    pdf.add_section_title("PARAMETERS SPECIFICATIONS TEST RESULTS")
+    pdf.add_section_title(0,10,"PARAMETERS SPECIFICATIONS TEST RESULTS")
     table_data = [
         ("Gum Content (%)", "more than 80%", data["Gum Content (%)"]),
         ("Moisture (%)", "less than 12%", data["Moisture (%)"]),
