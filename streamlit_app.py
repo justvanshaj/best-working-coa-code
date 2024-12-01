@@ -37,7 +37,12 @@ class COAPDF(FPDF):
     def add_table_row(self, col1, col2, col3=None, col_widths=(60, 60, 50), row_height=6, font_size=8):
         """Add a row to the table with adjustable widths, heights, and font size."""
         self.set_font("Arial", size=font_size)  # Set custom font size
-        # Add cells with specified column widths
+
+        # Ensure col_widths has enough elements for the columns being used
+        if len(col_widths) < 3:
+            col_widths = col_widths + (50,) * (3 - len(col_widths))  # Pad to ensure 3 elements
+
+        # Add cells with the specified widths
         self.cell(col_widths[0], row_height, col1, border=1)
         self.cell(col_widths[1], row_height, col2, border=1)
         if col3 is not None:
