@@ -58,7 +58,7 @@ def create_pdf(data):
 
     # Header Rows with adjusted row height and column width
     pdf.set_font("Arial", size=8)  # Set font size to 8 for header
-    pdf.cell(0, 10, f"Customer: {data['Customer']}", border=1, ln=True)
+    pdf.cell(0, 20, f"Customer: {data['Customer']}", border=1, ln=True)
 
     pdf.cell(60, 6, f"Product: {data['Product']}", border=1)  # Adjusted column width
     pdf.cell(60, 6, f"Date: {data['Date']}", border=1, ln=True)
