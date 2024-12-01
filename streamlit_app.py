@@ -69,8 +69,6 @@ def create_pdf(data):
     pdf.cell(60, 6, f"Invoice No.: {data['Invoice No.']}", border=1)
     pdf.cell(60, 6, f"PO No.: {data['PO No.']}", border=1, ln=True)
 
-    pdf.ln(5)  # Spacing before the next section
-
     # Parameters Specifications and Results
     pdf.add_section_title("PARAMETERS SPECIFICATIONS TEST RESULTS")
     table_data = [
@@ -88,8 +86,6 @@ def create_pdf(data):
     for row in table_data:
         pdf.add_table_row(*row)
 
-    pdf.ln(5)
-
     # Organoleptic Analysis Section
     pdf.add_section_title("ORGANOLEPTIC ANALYSIS")
     organoleptic_data = [
@@ -100,8 +96,6 @@ def create_pdf(data):
     for parameter, value in organoleptic_data:
         pdf.add_table_row(parameter, value)
 
-    pdf.ln(5)
-
     # Particle Size and Granulation Section
     pdf.add_section_title("PARTICLE SIZE AND GRANULATION")
     granulation_data = [
@@ -111,14 +105,10 @@ def create_pdf(data):
     for row in granulation_data:
         pdf.add_table_row(*row)
 
-    pdf.ln(5)
-
     # Viscosity Section with User Input
     pdf.add_section_title("VISCOSITY")
     pdf.add_table_row("After 2 hours", ">= BLANK cps", data["Viscosity After 2 Hours"])  # User input for 2 hours
     pdf.add_table_row("After 24 hours", "<= BLANK cps", data["Viscosity After 24 Hours"])  # User input for 24 hours
-
-    pdf.ln(5)
 
     # Microbiological Analysis Section
     pdf.add_section_title("MICROBIOLOGICAL ANALYSIS")
