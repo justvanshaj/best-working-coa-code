@@ -34,33 +34,30 @@ fields_to_fill = {
 
 # Custom PDF Class
 class COAPDF(FPDF):
-    def add_table_row(self, col1, col2, col3=None):
-        """Add a row to the table with adjusted row height and column width."""
-        self.set_font("Arial", size=8)  # Set font size to 8 for smaller text
-        row_height = 6  # Reduced row height
-        col_widths = [60, 60, 50]  # Adjusted column widths to fit within the page
-
-        # Add cells with adjusted column widths
+    def add_table_row(self, col1, col2, col3=None, col_widths=(60, 60, 50), row_height=6, font_size=8):
+        """Add a row to the table with adjustable widths, heights, and font size."""
+        self.set_font("Arial", size=font_size)  # Set custom font size
+        # Add cells with specified column widths
         self.cell(col_widths[0], row_height, col1, border=1)
         self.cell(col_widths[1], row_height, col2, border=1)
         if col3 is not None:
             self.cell(col_widths[2], row_height, col3, border=1)
         self.ln()
 
-    def add_section_title(self, title, font_size=8, cell_height=10):
-        """Add a section title with customizable cell size and font size."""
+    def add_section_title(self, title, font_size=8, cell_height=10, border=1):
+        """Add a section title with customizable font size, cell height, and border."""
         self.set_font("Arial", "B", font_size)  # Set custom font size
-        self.cell(0, cell_height, title, border=1, align="C", ln=True)
+        self.cell(0, cell_height, title, border=border, align="C", ln=True)
 
 def create_pdf(data):
     pdf = COAPDF()
     pdf.add_page()
 
-    # Header Rows with adjusted row height and column width
-    pdf.set_font("Arial", size=8)  # Set font size to 8 for header
+    # Header Rows
+    pdf.set_font("Arial", size=8)  # Default font size for header
     pdf.cell(0, 5, f"Customer: {data['Customer']}", border=1, ln=True)
 
-    pdf.cell(60, 5, f"Product: {data['Product']}", border=1)  # Adjusted column width
+    pdf.cell(60, 5, f"Product: {data['Product']}", border=1)
     pdf.cell(60, 5, f"Date: {data['Date']}", border=1, ln=True)
 
     pdf.cell(60, 5, f"Batch No.: {data['Batch No.']}", border=1)
@@ -70,7 +67,7 @@ def create_pdf(data):
     pdf.cell(60, 5, f"PO No.: {data['PO No.']}", border=1, ln=True)
 
     # Parameters Specifications and Results
-    pdf.add_section_title("PARAMETERS SPECIFICATIONS TEST RESULTS", font_size=8, cell_height=5)
+    pdf.add_section_title("PARAMETERS SPECIFICATIONS TEST RESULTS", font_size=10, cell_height=8)
     table_data = [
         ("Gum Content (%)", "more than 80%", data["Gum Content (%)"]),
         ("Moisture (%)", "less than 12%", data["Moisture (%)"]),
@@ -84,34 +81,34 @@ def create_pdf(data):
         ("Heavy Metals", "less than 1.0 mg/kg", data["Heavy Metals"]),
     ]
     for row in table_data:
-        pdf.add_table_row(*row)
+        pdf.add_table_row(*row, col_widths=(50, 50, 60), row_height=5, font_size=8)
 
     # Organoleptic Analysis Section
-    pdf.add_section_title("ORGANOLEPTIC ANALYSIS", font_size=8, cell_height=5)
+    pdf.add_section_title("ORGANOLEPTIC ANALYSIS", font_size=9, cell_height=6)
     organoleptic_data = [
         ("Appearance/Colour", "Cream/White Powder"),
         ("Odour", "Natural"),
         ("Taste", "Natural"),
     ]
     for parameter, value in organoleptic_data:
-        pdf.add_table_row(parameter, value)
+        pdf.add_table_row(parameter, value, col_widths=(70, 70), row_height=5)
 
     # Particle Size and Granulation Section
-    pdf.add_section_title("PARTICLE SIZE AND GRANULATION", font_size=8, cell_height=5)
+    pdf.add_section_title("PARTICLE SIZE AND GRANULATION", font_size=9, cell_height=6)
     granulation_data = [
         ("Through 100 Mesh", "99%", data["Through 100 Mesh"]),
         ("Through 200 Mesh", "95%-99%", data["Through 200 Mesh"]),
     ]
     for row in granulation_data:
-        pdf.add_table_row(*row)
+        pdf.add_table_row(*row, col_widths=(70, 50), row_height=5)
 
     # Viscosity Section with User Input
-    pdf.add_section_title("VISCOSITY", font_size=8, cell_height=5)
-    pdf.add_table_row("After 2 hours", ">= BLANK cps", data["Viscosity After 2 Hours"])  # User input for 2 hours
-    pdf.add_table_row("After 24 hours", "<= BLANK cps", data["Viscosity After 24 Hours"])  # User input for 24 hours
+    pdf.add_section_title("VISCOSITY", font_size=9, cell_height=6)
+    pdf.add_table_row("After 2 hours", ">= BLANK cps", data["Viscosity After 2 Hours"], col_widths=(70, 50, 50))
+    pdf.add_table_row("After 24 hours", "<= BLANK cps", data["Viscosity After 24 Hours"], col_widths=(70, 50, 50))
 
     # Microbiological Analysis Section
-    pdf.add_section_title("MICROBIOLOGICAL ANALYSIS", font_size=8, cell_height=5)
+    pdf.add_section_title("MICROBIOLOGICAL ANALYSIS", font_size=9, cell_height=6)
     microbiological_data = [
         ("APC/gm", "less than 5000/gm", data["APC/gm"]),
         ("Yeast & Mould", "less than 500/gm", data["Yeast & Mould"]),
@@ -120,7 +117,7 @@ def create_pdf(data):
         ("Salmonella", "Negative", data["Salmonella"]),
     ]
     for row in microbiological_data:
-        pdf.add_table_row(*row)
+        pdf.add_table_row(*row, col_widths=(60, 60, 50), row_height=5)
 
     return pdf
 
