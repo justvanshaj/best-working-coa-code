@@ -71,7 +71,6 @@ def create_pdf(data):
 
     # Parameters Specifications and Results
     pdf.add_section_title("PARAMETERS SPECIFICATIONS TEST RESULTS")
-    self.cell(0, 10, title, border=1, align="C", ln=True)
     table_data = [
         ("Gum Content (%)", "more than 80%", data["Gum Content (%)"]),
         ("Moisture (%)", "less than 12%", data["Moisture (%)"]),
