@@ -106,7 +106,7 @@ def create_pdf(data):
         pdf.add_table_row(*row)
 
     # Viscosity Section with User Input
-    pdf.add_section_title("VISCOSITY", font_size=8, cell_height=58)
+    pdf.add_section_title("VISCOSITY", font_size=8, cell_height=5)
     pdf.add_table_row("After 2 hours", ">= BLANK cps", data["Viscosity After 2 Hours"])  # User input for 2 hours
     pdf.add_table_row("After 24 hours", "<= BLANK cps", data["Viscosity After 24 Hours"])  # User input for 24 hours
 
