@@ -3,7 +3,7 @@ from docx import Document
 from io import BytesIO
 import datetime
 
-TEMPLATE_FILE = "FGFGFG.docx"  # Local file inside your app folder
+TEMPLATE_FILE = "FGFGFG.docx"  # Local template file
 
 def calculate_components(moisture):
     gum = 81.61
@@ -11,10 +11,8 @@ def calculate_components(moisture):
     ash = 0.64
     air = 3.0
     fat = 0.70
-
     total_fixed = gum + protein + ash + air + fat
     adjustment = 100 - (moisture + total_fixed)
-
     gum += adjustment
     return round(gum, 2), protein, ash, air, fat
 
