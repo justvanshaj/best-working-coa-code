@@ -1,8 +1,9 @@
 import streamlit as st
-import requests
 from docx import Document
 from io import BytesIO
 import datetime
+
+TEMPLATE_FILE = "FGFGFG.docx"  # Local file inside your app folder
 
 def calculate_components(moisture):
     gum = 81.61
@@ -17,14 +18,6 @@ def calculate_components(moisture):
     gum += adjustment
     return round(gum, 2), protein, ash, air, fat
 
-def download_template(url):
-    response = requests.get(url)
-    if response.status_code == 200:
-        return BytesIO(response.content)
-    else:
-        st.error("Failed to download template file.")
-        return None
-
 def replace_placeholders(doc, replacements):
     for paragraph in doc.paragraphs:
         for key, value in replacements.items():
@@ -38,14 +31,14 @@ def replace_placeholders(doc, replacements):
                     if key in cell.text:
                         cell.text = cell.text.replace(key, str(value))
 
-def generate_docx(cps_range, batch_no, moisture, ph_level, through_100, through_200, cps_2hr, cps_24hr, template_url):
+def generate_docx(cps_range, batch_no, moisture, ph_level, through_100, through_200, cps_2hr, cps_24hr):
     gum, protein, ash, air, fat = calculate_components(moisture)
 
-    template_file = download_template(template_url)
-    if template_file is None:
+    try:
+        doc = Document(TEMPLATE_FILE)
+    except Exception as e:
+        st.error(f"Error opening template file: {e}")
         return None
-
-    doc = Document(template_file)
 
     today = datetime.date.today().strftime("%d-%m-%Y")
 
@@ -74,7 +67,7 @@ def generate_docx(cps_range, batch_no, moisture, ph_level, through_100, through_
     return output
 
 # Streamlit app
-st.title('Batch Quality Report Generator (Template Based)')
+st.title('Batch Quality Report Generator (Local Template)')
 
 with st.form('input_form'):
     cps_range = st.text_input('CPS Range (e.g., 5500-6000 CPS)')
@@ -85,12 +78,11 @@ with st.form('input_form'):
     through_200 = st.number_input('Through 200 Mesh (%)', min_value=0.0, max_value=100.0, step=0.01)
     cps_2hr = st.number_input('Viscosity After 2 hours (CPS)', min_value=0, max_value=10000, step=1)
     cps_24hr = st.number_input('Viscosity After 24 hours (CPS)', min_value=0, max_value=10000, step=1)
-    template_url = st.text_input('https://github.com/justvanshaj/samplecoacode/blob/main/FGFGFG.docx')
-
+    
     submitted = st.form_submit_button('Generate Report')
 
 if submitted:
-    final_docx = generate_docx(cps_range, batch_no, moisture, ph_level, through_100, through_200, cps_2hr, cps_24hr, template_url)
+    final_docx = generate_docx(cps_range, batch_no, moisture, ph_level, through_100, through_200, cps_2hr, cps_24hr)
     if final_docx:
         st.success('Report generated successfully!')
         st.download_button('Download Report', final_docx, file_name=f'{batch_no}_Quality_Report.docx')
