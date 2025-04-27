@@ -1,7 +1,6 @@
 import streamlit as st
+import requests
 from docx import Document
-from docx.shared import Pt
-from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from io import BytesIO
 import datetime
 
@@ -18,118 +17,80 @@ def calculate_components(moisture):
     gum += adjustment
     return round(gum, 2), protein, ash, air, fat
 
-def style_table(table):
-    for row_idx, row in enumerate(table.rows):
-        for col_idx, cell in enumerate(row.cells):
-            para = cell.paragraphs[0]
-            run = para.runs[0]
-            run.font.size = Pt(11)
-            if row_idx == 0:
-                run.bold = True
-                para.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
-            else:
-                if col_idx == 0:
-                    para.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
-                else:
-                    para.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+def download_template(url):
+    response = requests.get(url)
+    if response.status_code == 200:
+        return BytesIO(response.content)
+    else:
+        st.error("Failed to download template file.")
+        return None
 
-def generate_docx(cps_range, batch_no, moisture, ph_level, through_100, through_200, cps_2hr, cps_24hr):
+def replace_placeholders(doc, replacements):
+    for paragraph in doc.paragraphs:
+        for key, value in replacements.items():
+            if key in paragraph.text:
+                paragraph.text = paragraph.text.replace(key, str(value))
+
+    for table in doc.tables:
+        for row in table.rows:
+            for cell in row.cells:
+                for key, value in replacements.items():
+                    if key in cell.text:
+                        cell.text = cell.text.replace(key, str(value))
+
+def generate_docx(cps_range, batch_no, moisture, ph_level, through_100, through_200, cps_2hr, cps_24hr, template_url):
     gum, protein, ash, air, fat = calculate_components(moisture)
 
-    doc = Document()
+    template_file = download_template(template_url)
+    if template_file is None:
+        return None
 
-    # Title
-    title = doc.add_paragraph()
-    run = title.add_run(f'PRODUCT: {cps_range}')
-    run.bold = True
-    run.font.size = Pt(14)
-    title.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
+    doc = Document(template_file)
 
-    # Date, Batch No., Shelf-life
-    doc.add_paragraph(f'Date: {datetime.date.today().strftime("%d-%m-%Y")}')
-    doc.add_paragraph(f'BATCH NO.: {batch_no}')
-    doc.add_paragraph('Shelf-life: 2 Years')
-    doc.add_paragraph('')
+    today = datetime.date.today().strftime("%d-%m-%Y")
 
-    # PARAMETERS Heading
-    para = doc.add_paragraph()
-    run = para.add_run('PARAMETERS')
-    run.bold = True
-    run.font.size = Pt(12)
-    para.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
+    replacements = {
+        "CPS_RANGE_HERE": cps_range,
+        "DATE_HERE": today,
+        "BATCH_NO_HERE": batch_no,
+        "MOISTURE_HERE": f"{moisture}%",
+        "GUM_CONTENT_HERE": f"{gum}%",
+        "PROTEIN_HERE": f"{protein}%",
+        "ASH_CONTENT_HERE": f"{ash}%",
+        "AIR_HERE": f"{air}%",
+        "FAT_HERE": f"{fat}%",
+        "PH_LEVEL_HERE": ph_level,
+        "THROUGH_100_HERE": f"{through_100}%",
+        "THROUGH_200_HERE": f"{through_200}%",
+        "CPS_2HR_HERE": f"{cps_2hr} CPS (1% solution, W/W, Spindle No. 4, RPM-20, at 25°C, Cold - Brookfield Viscometer - RVDV)",
+        "CPS_24HR_HERE": f"{cps_24hr} CPS (1% solution, W/W, Spindle No. 4, RPM-20, at 25°C, Cold - Brookfield Viscometer - RVDV)"
+    }
 
-    # Create table
-    table = doc.add_table(rows=1, cols=3)
-    table.style = 'Table Grid'
-    hdr_cells = table.rows[0].cells
-    hdr_cells[0].text = 'PARAMETERS'
-    hdr_cells[1].text = 'SPECIFICATIONS'
-    hdr_cells[2].text = 'TEST RESULTS'
+    replace_placeholders(doc, replacements)
 
-    data = [
-        # Organolectic
-        ('Appearance/Colour', 'Cream/White Powder', 'Cream/White Powder'),
-        ('Odour', 'Natural', 'Natural'),
-        ('Taste', 'Natural', 'Natural'),
-
-        # Technical
-        ('Gum Content (%)', 'more than 80%', f'{gum}%'),
-        ('Moisture (%)', 'less than 12%', f'{moisture}%'),
-        ('Protein (%)', 'less than 5%', f'{protein}%'),
-        ('ASH Content (%)', 'less than 1%', f'{ash}%'),
-        ('AIR (%)', 'less than 6%', f'{air}%'),
-        ('Fat (%)', 'less than 1%', f'{fat}%'),
-        ('Ph Levels', '5.5 - 7.0', f'{ph_level}'),
-        ('Arsenic', 'less than 3.0 mg/kg', '0.25 mg/kg'),
-        ('Lead', 'less than 2.0 mg/kg', '0.025 mg/kg'),
-        ('Heavy Metals', 'less than 1.0 mg/kg', '0.025 mg/kg'),
-
-        # Granulation
-        ('Through 100 Mesh', '99%', f'{through_100}%'),
-        ('Through 200 Mesh', '95%-99%', f'{through_200}%'),
-
-        # Viscosity
-        ('After 2 hours', '≥5500CPS', f'{cps_2hr} CPS (1% solution, W/W, Spindle No. 4, RPM-20, at 25°C, Cold - Brookfield Viscometer - RVDV)'),
-        ('After 24 hours', '≤6000CPS', f'{cps_24hr} CPS (1% solution, W/W, Spindle No. 4, RPM-20, at 25°C, Cold - Brookfield Viscometer - RVDV)'),
-
-        # Microbiological
-        ('APC/gm', 'less than 5000 cfu/g', '<100'),
-        ('Yeast & Mould', 'less than 500 cfu/g', 'Absent'),
-        ('Coliform', 'Negative', 'Absent'),
-        ('Ecoli', 'Negative', 'Absent'),
-        ('Salmonella', 'Negative', 'Absent')
-    ]
-
-    for param, spec, result in data:
-        row_cells = table.add_row().cells
-        row_cells[0].text = param
-        row_cells[1].text = spec
-        row_cells[2].text = result
-
-    style_table(table)
-
-    # Save
-    buffer = BytesIO()
-    doc.save(buffer)
-    buffer.seek(0)
-    return buffer
+    output = BytesIO()
+    doc.save(output)
+    output.seek(0)
+    return output
 
 # Streamlit app
-st.title('Batch Quality Report Generator')
+st.title('Batch Quality Report Generator (Template Based)')
 
 with st.form('input_form'):
     cps_range = st.text_input('CPS Range (e.g., 5500-6000 CPS)')
     batch_no = st.text_input('Batch Number')
     moisture = st.number_input('Moisture (%)', min_value=0.0, max_value=20.0, step=0.01)
-    ph_level = st.number_input('pH Level', min_value=0.0, max_value=14.0, step=0.01)
+    ph_level = st.text_input('pH Level')
     through_100 = st.number_input('Through 100 Mesh (%)', min_value=0.0, max_value=100.0, step=0.01)
     through_200 = st.number_input('Through 200 Mesh (%)', min_value=0.0, max_value=100.0, step=0.01)
     cps_2hr = st.number_input('Viscosity After 2 hours (CPS)', min_value=0, max_value=10000, step=1)
     cps_24hr = st.number_input('Viscosity After 24 hours (CPS)', min_value=0, max_value=10000, step=1)
-    
+    template_url = st.text_input('Template DOCX GitHub URL')
+
     submitted = st.form_submit_button('Generate Report')
 
 if submitted:
-    docx_file = generate_docx(cps_range, batch_no, moisture, ph_level, through_100, through_200, cps_2hr, cps_24hr)
-    st.success('Report generated successfully!')
-    st.download_button('Download Report', docx_file, file_name=f'{batch_no}_Quality_Report.docx')
+    final_docx = generate_docx(cps_range, batch_no, moisture, ph_level, through_100, through_200, cps_2hr, cps_24hr, template_url)
+    if final_docx:
+        st.success('Report generated successfully!')
+        st.download_button('Download Report', final_docx, file_name=f'{batch_no}_Quality_Report.docx')
