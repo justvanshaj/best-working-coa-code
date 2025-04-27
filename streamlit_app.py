@@ -85,7 +85,7 @@ with st.form('input_form'):
     through_200 = st.number_input('Through 200 Mesh (%)', min_value=0.0, max_value=100.0, step=0.01)
     cps_2hr = st.number_input('Viscosity After 2 hours (CPS)', min_value=0, max_value=10000, step=1)
     cps_24hr = st.number_input('Viscosity After 24 hours (CPS)', min_value=0, max_value=10000, step=1)
-    template_url = st.text_input('Template DOCX GitHub URL')
+    template_url = st.text_input('https://github.com/justvanshaj/samplecoacode/blob/main/FGFGFG.docx')
 
     submitted = st.form_submit_button('Generate Report')
 
