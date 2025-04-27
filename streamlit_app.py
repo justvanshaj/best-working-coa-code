@@ -1,6 +1,6 @@
 import streamlit as st
 from docx import Document
-from docx.shared import Pt, Inches
+from docx.shared import Pt
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from io import BytesIO
 import datetime
@@ -12,17 +12,26 @@ def calculate_components(moisture):
     air = 3.0
     fat = 0.70
 
-    total_others = gum + protein + ash + air + fat
-    adjustment = 100 - (moisture + total_others)
+    total_fixed = gum + protein + ash + air + fat
+    adjustment = 100 - (moisture + total_fixed)
 
     gum += adjustment
     return round(gum, 2), protein, ash, air, fat
 
 def style_table(table):
-    for row in table.rows:
-        for cell in row.cells:
-            cell.paragraphs[0].runs[0].font.size = Pt(10)
-            cell.paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+    for row_idx, row in enumerate(table.rows):
+        for col_idx, cell in enumerate(row.cells):
+            para = cell.paragraphs[0]
+            run = para.runs[0]
+            run.font.size = Pt(11)
+            if row_idx == 0:
+                run.bold = True
+                para.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+            else:
+                if col_idx == 0:
+                    para.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
+                else:
+                    para.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
 
 def generate_docx(cps_range, batch_no, moisture, ph_level, through_100, through_200, cps_2hr, cps_24hr):
     gum, protein, ash, air, fat = calculate_components(moisture)
@@ -34,46 +43,36 @@ def generate_docx(cps_range, batch_no, moisture, ph_level, through_100, through_
     run = title.add_run(f'PRODUCT: {cps_range}')
     run.bold = True
     run.font.size = Pt(14)
-    title.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+    title.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
 
     # Date, Batch No., Shelf-life
     doc.add_paragraph(f'Date: {datetime.date.today().strftime("%d-%m-%Y")}')
     doc.add_paragraph(f'BATCH NO.: {batch_no}')
     doc.add_paragraph('Shelf-life: 2 Years')
-
     doc.add_paragraph('')
 
     # PARAMETERS Heading
-    heading = doc.add_paragraph()
-    run = heading.add_run('PARAMETERS')
+    para = doc.add_paragraph()
+    run = para.add_run('PARAMETERS')
     run.bold = True
     run.font.size = Pt(12)
-    heading.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
+    para.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
 
-    # Table
+    # Create table
     table = doc.add_table(rows=1, cols=3)
     table.style = 'Table Grid'
-
     hdr_cells = table.rows[0].cells
     hdr_cells[0].text = 'PARAMETERS'
     hdr_cells[1].text = 'SPECIFICATIONS'
     hdr_cells[2].text = 'TEST RESULTS'
 
-    for cell in hdr_cells:
-        para = cell.paragraphs[0]
-        para.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
-        run = para.runs[0]
-        run.bold = True
-        run.font.size = Pt(11)
-
-    # All Sections
-    organo = [
+    data = [
+        # Organolectic
         ('Appearance/Colour', 'Cream/White Powder', 'Cream/White Powder'),
         ('Odour', 'Natural', 'Natural'),
-        ('Taste', 'Natural', 'Natural')
-    ]
+        ('Taste', 'Natural', 'Natural'),
 
-    technical = [
+        # Technical
         ('Gum Content (%)', 'more than 80%', f'{gum}%'),
         ('Moisture (%)', 'less than 12%', f'{moisture}%'),
         ('Protein (%)', 'less than 5%', f'{protein}%'),
@@ -83,20 +82,17 @@ def generate_docx(cps_range, batch_no, moisture, ph_level, through_100, through_
         ('Ph Levels', '5.5 - 7.0', f'{ph_level}'),
         ('Arsenic', 'less than 3.0 mg/kg', '0.25 mg/kg'),
         ('Lead', 'less than 2.0 mg/kg', '0.025 mg/kg'),
-        ('Heavy Metals', 'less than 1.0 mg/kg', '0.025 mg/kg')
-    ]
+        ('Heavy Metals', 'less than 1.0 mg/kg', '0.025 mg/kg'),
 
-    granulation = [
+        # Granulation
         ('Through 100 Mesh', '99%', f'{through_100}%'),
-        ('Through 200 Mesh', '95%-99%', f'{through_200}%')
-    ]
+        ('Through 200 Mesh', '95%-99%', f'{through_200}%'),
 
-    viscosity = [
+        # Viscosity
         ('After 2 hours', '≥5500CPS', f'{cps_2hr} CPS (1% solution, W/W, Spindle No. 4, RPM-20, at 25°C, Cold - Brookfield Viscometer - RVDV)'),
-        ('After 24 hours', '≤6000CPS', f'{cps_24hr} CPS (1% solution, W/W, Spindle No. 4, RPM-20, at 25°C, Cold - Brookfield Viscometer - RVDV)')
-    ]
+        ('After 24 hours', '≤6000CPS', f'{cps_24hr} CPS (1% solution, W/W, Spindle No. 4, RPM-20, at 25°C, Cold - Brookfield Viscometer - RVDV)'),
 
-    micro = [
+        # Microbiological
         ('APC/gm', 'less than 5000 cfu/g', '<100'),
         ('Yeast & Mould', 'less than 500 cfu/g', 'Absent'),
         ('Coliform', 'Negative', 'Absent'),
@@ -104,14 +100,11 @@ def generate_docx(cps_range, batch_no, moisture, ph_level, through_100, through_
         ('Salmonella', 'Negative', 'Absent')
     ]
 
-    sections = [organo, technical, granulation, viscosity, micro]
-
-    for section in sections:
-        for param, spec, result in section:
-            row_cells = table.add_row().cells
-            row_cells[0].text = param
-            row_cells[1].text = spec
-            row_cells[2].text = result
+    for param, spec, result in data:
+        row_cells = table.add_row().cells
+        row_cells[0].text = param
+        row_cells[1].text = spec
+        row_cells[2].text = result
 
     style_table(table)
 
