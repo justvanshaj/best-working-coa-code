@@ -3,7 +3,7 @@ from docx import Document
 from io import BytesIO
 import datetime
 
-TEMPLATE_FILE = "FGFGFG.docx"  # Local template file
+TEMPLATE_FILE = "Sample Piece Final.docx"  # Use your uploaded local template
 
 def calculate_components(moisture):
     gum = 81.61
@@ -16,20 +16,23 @@ def calculate_components(moisture):
     gum += adjustment
     return round(gum, 2), protein, ash, air, fat
 
+def replace_text_in_runs(runs, replacements):
+    for run in runs:
+        for key, value in replacements.items():
+            if key in run.text:
+                run.text = run.text.replace(key, str(value))
+
 def replace_placeholders(doc, replacements):
     for paragraph in doc.paragraphs:
-        for key, value in replacements.items():
-            if key in paragraph.text:
-                paragraph.text = paragraph.text.replace(key, str(value))
+        replace_text_in_runs(paragraph.runs, replacements)
 
     for table in doc.tables:
         for row in table.rows:
             for cell in row.cells:
-                for key, value in replacements.items():
-                    if key in cell.text:
-                        cell.text = cell.text.replace(key, str(value))
+                for paragraph in cell.paragraphs:
+                    replace_text_in_runs(paragraph.runs, replacements)
 
-def generate_docx(cps_range, batch_no, moisture, ph_level, through_100, through_200, cps_2hr, cps_24hr):
+def generate_docx(cps1, cps2, batch_no, moisture, ph_level, through_100, through_200):
     gum, protein, ash, air, fat = calculate_components(moisture)
 
     try:
@@ -38,11 +41,14 @@ def generate_docx(cps_range, batch_no, moisture, ph_level, through_100, through_
         st.error(f"Error opening template file: {e}")
         return None
 
-    today = datetime.date.today().strftime("%d-%m-%Y")
+    today = datetime.date.today()
+    current_month_year = today.strftime("%m-%Y")
+    best_before_year = today.year + 2
+    best_before = f"{today.strftime('%m')}-{best_before_year}"
 
     replacements = {
-        "CPS_RANGE_HERE": cps_range,
-        "DATE_HERE": today,
+        "CPS1_here": cps1,
+        "CPS2_here": cps2,
         "BATCH_NO_HERE": batch_no,
         "MOISTURE_HERE": f"{moisture}%",
         "GUM_CONTENT_HERE": f"{gum}%",
@@ -50,11 +56,11 @@ def generate_docx(cps_range, batch_no, moisture, ph_level, through_100, through_
         "ASH_CONTENT_HERE": f"{ash}%",
         "AIR_HERE": f"{air}%",
         "FAT_HERE": f"{fat}%",
-        "PH_LEVEL_HERE": ph_level,
+        "PH_LEVEL_HERE": str(ph_level),
         "THROUGH_100_HERE": f"{through_100}%",
         "THROUGH_200_HERE": f"{through_200}%",
-        "CPS_2HR_HERE": f"{cps_2hr} CPS ",
-        "CPS_24HR_HERE": f"{cps_24hr} CPS "
+        "CURRENT_MONTH_YEAR_here": current_month_year,
+        "Same_Month_Year+2_here": best_before,
     }
 
     replace_placeholders(doc, replacements)
@@ -64,23 +70,22 @@ def generate_docx(cps_range, batch_no, moisture, ph_level, through_100, through_
     output.seek(0)
     return output
 
-# Streamlit app
-st.title('Batch Quality Report Generator (Local Template)')
+# Streamlit UI
+st.title('Final Batch Report Generator (Exact Template)')
 
-with st.form('input_form'):
-    cps_range = st.text_input('CPS Range (e.g., 5500-6000 CPS)')
-    batch_no = st.text_input('Batch Number')
-    moisture = st.number_input('Moisture (%)', min_value=0.0, max_value=20.0, step=0.01)
-    ph_level = st.text_input('pH Level')
-    through_100 = st.number_input('Through 100 Mesh (%)', min_value=0.0, max_value=100.0, step=0.01)
-    through_200 = st.number_input('Through 200 Mesh (%)', min_value=0.0, max_value=100.0, step=0.01)
-    cps_2hr = st.number_input('Viscosity After 2 hours (CPS)', min_value=0, max_value=10000, step=1)
-    cps_24hr = st.number_input('Viscosity After 24 hours (CPS)', min_value=0, max_value=10000, step=1)
-    
-    submitted = st.form_submit_button('Generate Report')
+with st.form("form"):
+    cps1 = st.text_input("Viscosity After 2 Hours (CPS1)")
+    cps2 = st.text_input("Viscosity After 24 Hours (CPS2)")
+    batch_no = st.text_input("Batch Number")
+    moisture = st.number_input("Moisture (%)", min_value=0.0, max_value=20.0, step=0.01)
+    ph_level = st.text_input("pH Level")
+    through_100 = st.number_input("Through 100 Mesh (%)", min_value=0.0, max_value=100.0, step=0.01)
+    through_200 = st.number_input("Through 200 Mesh (%)", min_value=0.0, max_value=100.0, step=0.01)
+
+    submitted = st.form_submit_button("Generate Report")
 
 if submitted:
-    final_docx = generate_docx(cps_range, batch_no, moisture, ph_level, through_100, through_200, cps_2hr, cps_24hr)
-    if final_docx:
-        st.success('Report generated successfully!')
-        st.download_button('Download Report', final_docx, file_name=f'{batch_no}_Quality_Report.docx')
+    result = generate_docx(cps1, cps2, batch_no, moisture, ph_level, through_100, through_200)
+    if result:
+        st.success("Document ready!")
+        st.download_button("Download DOCX", result, file_name=f"{batch_no}_Report.docx")
