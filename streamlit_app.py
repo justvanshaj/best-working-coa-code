@@ -53,8 +53,8 @@ def generate_docx(cps_range, batch_no, moisture, ph_level, through_100, through_
         "PH_LEVEL_HERE": ph_level,
         "THROUGH_100_HERE": f"{through_100}%",
         "THROUGH_200_HERE": f"{through_200}%",
-        "CPS_2HR_HERE": f"{cps_2hr} CPS (1% solution, W/W, Spindle No. 4, RPM-20, at 25°C, Cold - Brookfield Viscometer - RVDV)",
-        "CPS_24HR_HERE": f"{cps_24hr} CPS (1% solution, W/W, Spindle No. 4, RPM-20, at 25°C, Cold - Brookfield Viscometer - RVDV)"
+        "CPS_2HR_HERE": f"{cps_2hr} CPS ",
+        "CPS_24HR_HERE": f"{cps_24hr} CPS "
     }
 
     replace_placeholders(doc, replacements)
