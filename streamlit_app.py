@@ -3,7 +3,7 @@ from docx import Document
 from io import BytesIO
 import datetime
 
-TEMPLATE_FILE = "Sample Piece Final.docx"  # Ensure this is in the same folder as this script
+TEMPLATE_FILE = "Sample Piece Final.docx"  # Make sure this file exists
 
 def calculate_components(moisture):
     gum = 81.61
@@ -31,14 +31,8 @@ def replace_placeholders(doc, replacements):
                 for paragraph in cell.paragraphs:
                     replace_text_in_runs(paragraph.runs, replacements)
 
-def generate_docx(cps1, cps2, batch_no, moisture, ph_level, through_100, through_200, cps_range_input):
+def generate_docx(cps1, cps2, batch_no, moisture, ph_level, through_100, through_200, cps_range):
     gum, protein, ash, air, fat = calculate_components(moisture)
-
-    try:
-        first_part, last_part = cps_range_input.strip().split('-')
-        cps_range_full = cps_range_input.strip()
-    except Exception:
-        first_part, last_part, cps_range_full = "N/A", "N/A", "Invalid Range"
 
     try:
         doc = Document(TEMPLATE_FILE)
@@ -48,11 +42,19 @@ def generate_docx(cps1, cps2, batch_no, moisture, ph_level, through_100, through
 
     today = datetime.date.today()
     current_month_year = today.strftime("%m-%Y")
-    best_before = f"{today.strftime('%m')}-{today.year + 2}"
+    best_before_year = today.year + 2
+    best_before = f"{today.strftime('%m')}-{best_before_year}"
+
+    try:
+        cps_range_first = cps_range.split("-")[0].strip()
+        cps_range_last = cps_range.split("-")[1].strip()
+    except Exception:
+        cps_range_first = ""
+        cps_range_last = ""
 
     replacements = {
-        "CPS_2hr_here": cps1,
-        "CPS_24hr_here": cps2,
+        "CPS1_here": cps1,
+        "CPS2_here": cps2,
         "BATCH_NO_HERE": batch_no,
         "MOISTURE_HERE": f"{moisture}%",
         "GUM_CONTENT_HERE": f"{gum}%",
@@ -60,14 +62,16 @@ def generate_docx(cps1, cps2, batch_no, moisture, ph_level, through_100, through
         "ASH_CONTENT_HERE": f"{ash}%",
         "AIR_HERE": f"{air}%",
         "FAT_HERE": f"{fat}%",
-        "PH_LEVEL_HERE": str(ph_level),
+        "PH_LEVEL_HERE": ph_level,
         "THROUGH_100_HERE": f"{through_100}%",
         "THROUGH_200_HERE": f"{through_200}%",
         "CURRENT_MONTH_YEAR_here": current_month_year,
         "CURRENT_Month_Year+2_here": best_before,
-        "CPS_RANGE_here": cps_range_full,
-        "CPS_RANGE_FIRST_4_DIGIT": first_part,
-        "CPS_RANGE_LAST_4_DIGIT": last_part,
+        "CPS_RANGE_HERE": cps_range,
+        "CPS_RANGE_FIRST_4_DIGIT": cps_range_first,
+        "CPS_RANGE_LAST_4_DIGIT": cps_range_last,
+        "CPS_2hr_here": cps1,
+        "CPS_24hr_here": cps2
     }
 
     replace_placeholders(doc, replacements)
@@ -77,26 +81,23 @@ def generate_docx(cps1, cps2, batch_no, moisture, ph_level, through_100, through
     output.seek(0)
     return output
 
-# --- Streamlit UI ---
-st.title("📄 Final Batch Report Generator")
+# Streamlit UI
+st.title('Final Batch Report Generator (With CPS Range Support)')
 
-with st.form("input_form"):
-    cps1 = st.text_input("Viscosity After 2 Hours (CPS1)", max_chars=10)
-    cps2 = st.text_input("Viscosity After 24 Hours (CPS2)", max_chars=10)
+with st.form("form"):
+    cps_range = st.text_input("Enter CPS Range (e.g., 5000-5500)")
+    cps1 = st.text_input("Viscosity After 2 Hours (CPS1)")
+    cps2 = st.text_input("Viscosity After 24 Hours (CPS2)")
     batch_no = st.text_input("Batch Number")
     moisture = st.number_input("Moisture (%)", min_value=0.0, max_value=20.0, step=0.01)
-    ph_level = st.text_input("pH Level", max_chars=10)
+    ph_level = st.text_input("pH Level")
     through_100 = st.number_input("Through 100 Mesh (%)", min_value=0.0, max_value=100.0, step=0.01)
     through_200 = st.number_input("Through 200 Mesh (%)", min_value=0.0, max_value=100.0, step=0.01)
-    cps_range_input = st.text_input("CPS Range (e.g. 5000-5500)")
 
-    submitted = st.form_submit_button("Generate DOCX")
+    submitted = st.form_submit_button("Generate Report")
 
 if submitted:
-    if not (cps1 and cps2 and batch_no and ph_level and cps_range_input):
-        st.error("Please fill all required fields.")
-    else:
-        result = generate_docx(cps1, cps2, batch_no, moisture, ph_level, through_100, through_200, cps_range_input)
-        if result:
-            st.success("✅ Document generated successfully!")
-            st.download_button("📥 Download DOCX", result, file_name=f"{batch_no}_Report.docx")
+    result = generate_docx(cps1, cps2, batch_no, moisture, ph_level, through_100, through_200, cps_range)
+    if result:
+        st.success("Document ready!")
+        st.download_button("Download DOCX", result, file_name=f"{batch_no}_Report.docx")
