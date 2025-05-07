@@ -1,90 +1,98 @@
 import streamlit as st
 from docx import Document
 from datetime import datetime
+import io
 import re
-import os
 
-st.set_page_config(page_title="Final Batch Report Generator (Exact Template)", layout="centered")
-st.title("Final Batch Report Generator (Exact Template)")
-
-# Input fields
-cps_range = st.text_input("CPS Range (e.g., 5000-5500)", value="5000-5500")
-cps2 = st.text_input("Viscosity After 24 Hours (CPS2)")
-batch_number = st.text_input("Batch Number")
-moisture = st.number_input("Moisture (%)", min_value=0.0, format="%.2f")
-ph = st.text_input("pH Level")
-mesh_100 = st.number_input("Through 100 Mesh (%)", min_value=0.0, format="%.2f")
-mesh_200 = st.number_input("Through 200 Mesh (%)", min_value=0.0, format="%.2f")
-
-# Date info
-now = datetime.now()
-current_display = now.strftime("%B %Y")  # e.g., May 2025
-future_display = datetime(now.year + 2, now.month, 1).strftime("%B %Y")  # e.g., May 2027
-
-st.markdown(f"**Current Month-Year:** {current_display}")
-st.markdown(f"**Same Month with Year +2:** {future_display}")
-
-# Button
-if st.button("Generate Report"):
+# Function to parse the CPS range
+def parse_cps_range(cps_range):
     try:
-        # Handle CPS range
-        cps_match = re.match(r"(\d{4})-(\d{4})", cps_range)
-        if not cps_match:
-            st.error("Invalid CPS range format. Please enter like 5000-5500.")
-            st.stop()
-        cps_first, cps_last = cps_match.groups()
-
-        # Load template
-        template_path = "Sample Piece Final.docx"
-        if not os.path.exists(template_path):
-            st.error("Template file not found.")
-            st.stop()
-
-        doc = Document(template_path)
-
-        # Replacement mapping
-        replacements = {
-            "CPS1_here": cps_range,
-            "CPS_RANGE_FIRST_4_DIGIT": cps_first,
-            "CPS_RANGE_LAST_4_DIGIT": cps_last,
-            "CPS2_here": cps2,
-            "BATCH_NUMBER_HERE": batch_number,
-            "MOISTURE_HERE": f"{moisture:.2f}",
-            "PH_HERE": ph,
-            "THROUGH_100_MESH_HERE": f"{mesh_100:.2f}",
-            "THROUGH_200_MESH_HERE": f"{mesh_200:.2f}",
-            "CURRENT_MONTH_YEAR": current_display,
-            "FUTURE_MONTH_YEAR": future_display,
-        }
-
-        # Replace text in paragraphs and tables
-        def replace_text_in_paragraphs(paragraphs):
-            for p in paragraphs:
-                for key, val in replacements.items():
-                    if key in p.text:
-                        inline = p.runs
-                        for i in range(len(inline)):
-                            if key in inline[i].text:
-                                inline[i].text = inline[i].text.replace(key, val)
-
-        def replace_text_in_tables(tables):
-            for table in tables:
-                for row in table.rows:
-                    for cell in row.cells:
-                        replace_text_in_paragraphs(cell.paragraphs)
-
-        replace_text_in_paragraphs(doc.paragraphs)
-        replace_text_in_tables(doc.tables)
-
-        # Save to BytesIO
-        from io import BytesIO
-        output = BytesIO()
-        doc.save(output)
-        output.seek(0)
-
-        filename = f"{batch_number.replace(' ', '_')}_Report.docx"
-        st.success("Report generated successfully!")
-        st.download_button("Download Final Report", output, file_name=filename, mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
-
+        first, last = cps_range.split("-")
+        return first.strip(), last.strip()
     except Exception as e:
-        st.error(f"Error: {str(e)}")
+        return "0000", "0000"  # Fallback if format is wrong
+
+# Function to get current month and year + best-before month/year
+def get_month_year_strings():
+    now = datetime.now()
+    current_str = now.strftime("%B %Y")  # e.g., May 2025
+    best_before_str = now.replace(year=now.year + 2).strftime("%B %Y")
+    return current_str, best_before_str
+
+# Function to replace placeholders in the document
+def replace_placeholders(doc, replacements):
+    # Paragraphs
+    for p in doc.paragraphs:
+        for key, val in replacements.items():
+            if key in p.text:
+                inline = p.runs
+                for run in inline:
+                    if key in run.text:
+                        run.text = run.text.replace(key, val)
+
+    # Tables
+    for table in doc.tables:
+        for row in table.rows:
+            for cell in row.cells:
+                for p in cell.paragraphs:
+                    for key, val in replacements.items():
+                        if key in p.text:
+                            inline = p.runs
+                            for run in inline:
+                                if key in run.text:
+                                    run.text = run.text.replace(key, val)
+
+# Function to generate the report
+def generate_report(data):
+    # Load the template document
+    doc = Document("template.docx")
+    
+    # Replace all placeholders
+    replace_placeholders(doc, data)
+    
+    # Save the document to a BytesIO object
+    doc_stream = io.BytesIO()
+    doc.save(doc_stream)
+    doc_stream.seek(0)
+    
+    return doc_stream
+
+def main():
+    st.title("Final Batch Report Generator (Exact Template)")
+
+    # Input fields
+    cps_range = st.text_input("CPS Range (e.g., 5000-5500)", "5000-5500")
+    cps_first, cps_last = parse_cps_range(cps_range)
+    cps2 = st.text_input("Viscosity After 24 Hours (CPS2)")
+    batch_no = st.text_input("Batch Number")
+    moisture = st.number_input("Moisture (%)", min_value=0.0, step=0.01)
+    ph_level = st.text_input("pH Level")
+    through_100 = st.number_input("Through 100 Mesh (%)", min_value=0.0, step=0.01)
+    through_200 = st.number_input("Through 200 Mesh (%)", min_value=0.0, step=0.01)
+
+    # Get current month and year, and best-before date
+    current_month_year, best_before = get_month_year_strings()
+
+    # Create replacements dictionary
+    replacements = {
+        "CPS_RANGE_FIRST_4_DIGIT": cps_first,
+        "CPS_RANGE_LAST_4_DIGIT": cps_last,
+        "CPS2": cps2,
+        "BATCH_NO": batch_no,
+        "MOISTURE": str(moisture),
+        "PH_LEVEL": ph_level,
+        "THROUGH_100": str(through_100),
+        "THROUGH_200": str(through_200),
+        "CURRENT_MONTH_YEAR": current_month_year,
+        "BEST_BEFORE": best_before,
+    }
+
+    # Generate report
+    if st.button("Generate Report"):
+        doc_stream = generate_report(replacements)
+        
+        # Provide download link for the generated report
+        st.download_button("Download Report", doc_stream, "Batch_Report.docx")
+
+if __name__ == "__main__":
+    main()
