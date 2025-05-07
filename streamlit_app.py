@@ -3,7 +3,7 @@ from docx import Document
 from io import BytesIO
 import datetime
 
-TEMPLATE_FILE = "Sample Piece Final.docx"  # Ensure this template is in your project folder
+TEMPLATE_FILE = "Sample Piece Final.docx"  # Your Word template
 
 def calculate_components(moisture):
     gum = 81.61
@@ -25,20 +25,19 @@ def replace_text_in_runs(runs, replacements):
 def replace_placeholders(doc, replacements):
     for paragraph in doc.paragraphs:
         replace_text_in_runs(paragraph.runs, replacements)
-
     for table in doc.tables:
         for row in table.rows:
             for cell in row.cells:
                 for paragraph in cell.paragraphs:
                     replace_text_in_runs(paragraph.runs, replacements)
 
-def generate_docx(cps_range, cps2, batch_no, moisture, ph_level, through_100, through_200):
+def generate_docx(cps_range, cps1, cps2, batch_no, moisture, ph_level, through_100, through_200):
     try:
-        cps_first, cps_last = cps_range.split('-')
+        cps_first, cps_last = cps_range.split("-")
         cps_first = cps_first.strip()
         cps_last = cps_last.strip()
     except Exception:
-        st.error("Invalid CPS range format. Use format like 5000-5500")
+        st.error("Invalid CPS range format. Use format like '5000-5500'.")
         return None
 
     gum, protein, ash, air, fat = calculate_components(moisture)
@@ -50,12 +49,11 @@ def generate_docx(cps_range, cps2, batch_no, moisture, ph_level, through_100, th
         return None
 
     today = datetime.date.today()
-    current_month_year = today.strftime("%m-%Y")
-    best_before_year = today.year + 2
-    best_before = f"{today.strftime('%m')}-{best_before_year}"
+    current_month_year = today.strftime("%B %Y")  # e.g., May 2025
+    best_before = today.replace(year=today.year + 2).strftime("%B %Y")  # e.g., May 2027
 
     replacements = {
-        "CPS1_here": cps_first,
+        "CPS1_here": cps1,
         "CPS2_here": cps2,
         "BATCH_NO_HERE": batch_no,
         "MOISTURE_HERE": f"{moisture}%",
@@ -70,7 +68,7 @@ def generate_docx(cps_range, cps2, batch_no, moisture, ph_level, through_100, th
         "CURRENT_MONTH_YEAR_here": current_month_year,
         "Same_Month_Year+2_here": best_before,
         "CPS_RANGE_FIRST_4_DIGIT": cps_first,
-        "CPS_RANGE_LAST_4_DIGIT": cps_last
+        "CPS_RANGE_LAST_4_DIGIT": cps_last,
     }
 
     replace_placeholders(doc, replacements)
@@ -80,11 +78,16 @@ def generate_docx(cps_range, cps2, batch_no, moisture, ph_level, through_100, th
     output.seek(0)
     return output
 
-# --- Streamlit UI ---
+# Streamlit UI
 st.title('Final Batch Report Generator (Exact Template)')
+
+today = datetime.date.today()
+current_display = today.strftime("%m-%Y")
+future_display = f"{today.strftime('%m')}-{today.year + 2}"
 
 with st.form("form"):
     cps_range = st.text_input("CPS Range (e.g., 5000-5500)")
+    cps1 = st.text_input("Viscosity After 2 Hours (CPS1)")
     cps2 = st.text_input("Viscosity After 24 Hours (CPS2)")
     batch_no = st.text_input("Batch Number")
     moisture = st.number_input("Moisture (%)", min_value=0.0, max_value=20.0, step=0.01)
@@ -92,10 +95,14 @@ with st.form("form"):
     through_100 = st.number_input("Through 100 Mesh (%)", min_value=0.0, max_value=100.0, step=0.01)
     through_200 = st.number_input("Through 200 Mesh (%)", min_value=0.0, max_value=100.0, step=0.01)
 
+    # Show current & future month-year to user
+    st.text_input("Current Month-Year (For Reference)", value=current_display, disabled=True)
+    st.text_input("Same Month with Year +2 (For Reference)", value=future_display, disabled=True)
+
     submitted = st.form_submit_button("Generate Report")
 
 if submitted:
-    result = generate_docx(cps_range, cps2, batch_no, moisture, ph_level, through_100, through_200)
+    result = generate_docx(cps_range, cps1, cps2, batch_no, moisture, ph_level, through_100, through_200)
     if result:
-        st.success("Document ready!")
-        st.download_button("Download DOCX", result, file_name=f"{batch_no}_Report.docx")
+        st.success("Document generated successfully!")
+        st.download_button("Download Report", result, file_name=f"{batch_no}_Report.docx")
