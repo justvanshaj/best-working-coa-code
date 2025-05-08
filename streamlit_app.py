@@ -4,7 +4,7 @@ from io import BytesIO
 import datetime
 import os
 
-DEFAULT_TEMPLATE = "Finish_Work_tpl_ready.docx"
+TEMPLATE_FILE = "Finish_Work_CLEANED_FOR_DOCXTPL.docx"
 
 # 🔧 Calculate Guar Gum Components Based on Moisture
 def calculate_components(moisture):
@@ -18,21 +18,21 @@ def calculate_components(moisture):
     gum += adjustment
     return round(gum, 2), protein, ash, air, fat
 
-# 📦 Try to load template from file or uploaded fallback
+# 📦 Try to load template from file or fallback to uploaded one
 def load_template(uploaded_template):
     if uploaded_template:
         return DocxTemplate(uploaded_template)
-    elif os.path.exists(DEFAULT_TEMPLATE):
-        return DocxTemplate(DEFAULT_TEMPLATE)
+    elif os.path.exists(TEMPLATE_FILE):
+        return DocxTemplate(TEMPLATE_FILE)
     else:
         return None
 
 st.title("🧾 Final Guar Gum Batch Report Generator")
 
-# 📤 Upload field in case the template isn't found
-uploaded_template = st.file_uploader("⬆️ Upload Template (optional fallback)", type="docx")
+# Optional Upload Fallback
+uploaded_template = st.file_uploader("⬆️ Upload Custom Template (optional)", type="docx")
 
-# 📋 Form for Inputs
+# 📋 User Input Form
 with st.form("batch_form"):
     cpsgt = st.text_input("CPSGT (2 Hour Viscosity Threshold)", "5000")
     cpslt = st.text_input("CPSLT (24 Hour Viscosity Threshold)", "5500")
@@ -49,7 +49,6 @@ with st.form("batch_form"):
 
 if submitted:
     gum, protein, ash, air, fat = calculate_components(moisture)
-    
     now = datetime.datetime.now()
     try:
         best_before = month_year.replace(str(now.year), str(now.year + 2))
@@ -63,7 +62,7 @@ if submitted:
         "CPS24_HERE": cps24,
         "BATCH_NUMBER_HERE": batch_no,
         "MONTH_YYYY_HERE": month_year,
-        "MONTH_YYYY+2_HERE": best_before,
+        "MONTH_YYYY_PLUS2_HERE": best_before,
         "MOIST_HERE": f"{moisture}%",
         "GUM_CONTENT_HERE": f"{gum}%",
         "PROTEIN_HERE": f"{protein}%",
@@ -71,8 +70,8 @@ if submitted:
         "AIR_HERE": f"{air}%",
         "FAT_HERE": f"{fat}%",
         "PH_HERE": ph,
-        "100#_HERE": f"{through_100}%",
-        "200#_HERE": f"{through_200}%",
+        "THROUGH_100_HERE": f"{through_100}%",
+        "THROUGH_200_HERE": f"{through_200}%",
     }
 
     doc = load_template(uploaded_template)
