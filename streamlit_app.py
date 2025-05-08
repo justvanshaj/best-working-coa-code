@@ -4,9 +4,9 @@ from io import BytesIO
 import datetime
 import os
 
-TEMPLATE_FILE = "Finish_Work_CLEANED_FOR_DOCXTPL.docx"
+TEMPLATE_FILE = "Finish_Work_FINAL_SAFE.docx"
 
-# 🔧 Calculate Guar Gum Components Based on Moisture
+# Guar gum component calculator
 def calculate_components(moisture):
     gum = 81.61
     protein = 3.15
@@ -18,7 +18,7 @@ def calculate_components(moisture):
     gum += adjustment
     return round(gum, 2), protein, ash, air, fat
 
-# 📦 Try to load template from file or fallback to uploaded one
+# Load template from file or uploaded fallback
 def load_template(uploaded_template):
     if uploaded_template:
         return DocxTemplate(uploaded_template)
@@ -27,12 +27,12 @@ def load_template(uploaded_template):
     else:
         return None
 
-st.title("🧾 Final Guar Gum Batch Report Generator")
+st.title("🧾 Guar Gum Batch Report Generator")
 
-# Optional Upload Fallback
+# Upload backup option
 uploaded_template = st.file_uploader("⬆️ Upload Custom Template (optional)", type="docx")
 
-# 📋 User Input Form
+# Input form
 with st.form("batch_form"):
     cpsgt = st.text_input("CPSGT (2 Hour Viscosity Threshold)", "5000")
     cpslt = st.text_input("CPSLT (24 Hour Viscosity Threshold)", "5500")
@@ -56,22 +56,22 @@ if submitted:
         best_before = "N/A"
 
     context = {
-        "CPSGT_HERE": cpsgt,
-        "CPSLT_HERE": cpslt,
-        "CPS2_HERE": cps2,
-        "CPS24_HERE": cps24,
-        "BATCH_NUMBER_HERE": batch_no,
-        "MONTH_YYYY_HERE": month_year,
-        "MONTH_YYYY_PLUS2_HERE": best_before,
-        "MOIST_HERE": f"{moisture}%",
-        "GUM_CONTENT_HERE": f"{gum}%",
-        "PROTEIN_HERE": f"{protein}%",
-        "ASH_HERE": f"{ash}%",
-        "AIR_HERE": f"{air}%",
-        "FAT_HERE": f"{fat}%",
-        "PH_HERE": ph,
-        "THROUGH_100_HERE": f"{through_100}%",
-        "THROUGH_200_HERE": f"{through_200}%",
+        "CPSGTHERE": cpsgt,
+        "CPSLTHERE": cpslt,
+        "CPS2HERE": cps2,
+        "CPS24HERE": cps24,
+        "BATCHNUMBERHERE": batch_no,
+        "MONTHYYYYHERE": month_year,
+        "MONTHYYYYplus2HERE": best_before,
+        "MOISTHERE": f"{moisture}%",
+        "GUMCONTENTHERE": f"{gum}%",
+        "PROTEINHERE": f"{protein}%",
+        "ASHHERE": f"{ash}%",
+        "AIRHERE": f"{air}%",
+        "FATHERE": f"{fat}%",
+        "PHHERE": ph,
+        "100MESHHERE": f"{through_100}%",
+        "200MESHHERE": f"{through_200}%",
     }
 
     doc = load_template(uploaded_template)
