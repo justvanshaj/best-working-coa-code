@@ -2,8 +2,9 @@ import streamlit as st
 from docxtpl import DocxTemplate
 from io import BytesIO
 import datetime
+import os
 
-TEMPLATE_FILE = "Finish_Work_tpl_ready.docx"  # Uploaded in repo
+DEFAULT_TEMPLATE = "Finish_Work_tpl_ready.docx"
 
 # 🔧 Calculate Guar Gum Components Based on Moisture
 def calculate_components(moisture):
@@ -17,9 +18,21 @@ def calculate_components(moisture):
     gum += adjustment
     return round(gum, 2), protein, ash, air, fat
 
+# 📦 Try to load template from file or uploaded fallback
+def load_template(uploaded_template):
+    if uploaded_template:
+        return DocxTemplate(uploaded_template)
+    elif os.path.exists(DEFAULT_TEMPLATE):
+        return DocxTemplate(DEFAULT_TEMPLATE)
+    else:
+        return None
+
 st.title("🧾 Final Guar Gum Batch Report Generator")
 
-# 📋 Form for User Inputs
+# 📤 Upload field in case the template isn't found
+uploaded_template = st.file_uploader("⬆️ Upload Template (optional fallback)", type="docx")
+
+# 📋 Form for Inputs
 with st.form("batch_form"):
     cpsgt = st.text_input("CPSGT (2 Hour Viscosity Threshold)", "5000")
     cpslt = st.text_input("CPSLT (24 Hour Viscosity Threshold)", "5500")
@@ -37,14 +50,12 @@ with st.form("batch_form"):
 if submitted:
     gum, protein, ash, air, fat = calculate_components(moisture)
     
-    # Calculate Best Before Month+2 Year
     now = datetime.datetime.now()
     try:
         best_before = month_year.replace(str(now.year), str(now.year + 2))
     except:
         best_before = "N/A"
 
-    # 📦 Build context for placeholders
     context = {
         "CPSGT_HERE": cpsgt,
         "CPSLT_HERE": cpslt,
@@ -64,13 +75,16 @@ if submitted:
         "200#_HERE": f"{through_200}%",
     }
 
-    try:
-        doc = DocxTemplate(TEMPLATE_FILE)
-        doc.render(context)
-        output = BytesIO()
-        doc.save(output)
-        output.seek(0)
-        st.success("✅ Report generated successfully!")
-        st.download_button("📥 Download Report", output, file_name=f"{batch_no}_report.docx")
-    except Exception as e:
-        st.error(f"⚠️ Error while generating document: {e}")
+    doc = load_template(uploaded_template)
+    if doc:
+        try:
+            doc.render(context)
+            output = BytesIO()
+            doc.save(output)
+            output.seek(0)
+            st.success("✅ Report generated successfully!")
+            st.download_button("📥 Download DOCX", output, file_name=f"{batch_no}_report.docx")
+        except Exception as e:
+            st.error(f"⚠️ Error rendering document: {e}")
+    else:
+        st.error("❌ Template not found. Please upload a valid .docx file.")
