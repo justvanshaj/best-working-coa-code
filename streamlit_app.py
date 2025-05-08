@@ -4,7 +4,7 @@ from io import BytesIO
 import datetime
 import os
 
-TEMPLATE_FILE = "Finish_Work_FINAL_SAFE.docx"
+TEMPLATE_FILE = ".docx"
 
 # Guar gum component calculator
 def calculate_components(moisture):
