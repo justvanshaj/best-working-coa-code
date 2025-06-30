@@ -1,89 +1,74 @@
 import streamlit as st
-from docxtpl import DocxTemplate
-from io import BytesIO
-import datetime
+from docx import Document
+import random
 import os
 
-TEMPLATE_FILE = ".docx"
-
-# Guar gum component calculator
 def calculate_components(moisture):
-    gum = 81.61
-    protein = 3.15
-    ash = 0.64
-    air = 3.0
-    fat = 0.70
-    total_fixed = gum + protein + ash + air + fat
-    adjustment = 100 - (moisture + total_fixed)
-    gum += adjustment
-    return round(gum, 2), protein, ash, air, fat
+    remaining = 100 - moisture
+    gum = round(random.uniform(81, min(85, remaining - 1.5)), 2)
+    remaining -= gum
+    protein = round(min(5, remaining * 0.2), 2)
+    remaining -= protein
+    ash = round(min(1, remaining * 0.2), 2)
+    remaining -= ash
+    air = round(min(6, remaining * 0.5), 2)
+    remaining -= air
+    fat = round(remaining, 2)
+    return gum, protein, ash, air, fat
 
-# Load template from file or uploaded fallback
-def load_template(uploaded_template):
-    if uploaded_template:
-        return DocxTemplate(uploaded_template)
-    elif os.path.exists(TEMPLATE_FILE):
-        return DocxTemplate(TEMPLATE_FILE)
-    else:
-        return None
+def generate_docx(data, template_path="template_coa.docx", output_path="generated_coa.docx"):
+    doc = Document(template_path)
+    for p in doc.paragraphs:
+        for key, value in data.items():
+            if f"{{{{{key}}}}}" in p.text:
+                p.text = p.text.replace(f"{{{{{key}}}}}", str(value))
+    for table in doc.tables:
+        for row in table.rows:
+            for cell in row.cells:
+                for key, value in data.items():
+                    if f"{{{{{key}}}}}" in cell.text:
+                        cell.text = cell.text.replace(f"{{{{{key}}}}}", str(value))
+    doc.save(output_path)
+    return output_path
 
-st.title("🧾 Guar Gum Batch Report Generator")
+# Streamlit App
+st.title("COA Document Generator")
 
-# Upload backup option
-uploaded_template = st.file_uploader("⬆️ Upload Custom Template (optional)", type="docx")
+st.subheader("Enter COA Details:")
 
-# Input form
-with st.form("batch_form"):
-    cpsgt = st.text_input("CPSGT (2 Hour Viscosity Threshold)", "5000")
-    cpslt = st.text_input("CPSLT (24 Hour Viscosity Threshold)", "5500")
-    cps2 = st.text_input("Actual CPS After 2 Hours")
-    cps24 = st.text_input("Actual CPS After 24 Hours")
-    batch_no = st.text_input("Batch Number")
-    month_year = st.text_input("Month Year (e.g. May 2025)")
-    moisture = st.number_input("Moisture (%)", min_value=0.0, max_value=20.0, step=0.01)
-    ph = st.text_input("pH Level")
-    through_100 = st.number_input("Through 100 Mesh (%)", min_value=0.0, max_value=100.0)
-    through_200 = st.number_input("Through 200 Mesh (%)", min_value=0.0, max_value=100.0)
+product = st.text_input("Product Name")
+date = st.text_input("Date")
+batch_no = st.text_input("Batch Number")
+best_before = st.text_input("Best Before")
+moisture = st.number_input("Moisture (%)", min_value=0.0, max_value=100.0, step=0.01)
+ph = st.text_input("pH Level (5.5 - 7.0)")
+mesh_200 = st.text_input("200 Mesh (%)")
+viscosity_2h = st.text_input("Viscosity After 2 Hours (CPS)")
+viscosity_24h = st.text_input("Viscosity After 24 Hours (CPS)")
 
-    submitted = st.form_submit_button("Generate Report")
-
-if submitted:
+if st.button("Generate COA Document"):
     gum, protein, ash, air, fat = calculate_components(moisture)
-    now = datetime.datetime.now()
-    try:
-        best_before = month_year.replace(str(now.year), str(now.year + 2))
-    except:
-        best_before = "N/A"
-
-    context = {
-        "CPSGTHERE": cpsgt,
-        "CPSLTHERE": cpslt,
-        "CPS2HERE": cps2,
-        "CPS24HERE": cps24,
-        "BATCHNUMBERHERE": batch_no,
-        "MONTHYYYYHERE": month_year,
-        "MONTHYYYYplus2HERE": best_before,
-        "MOISTHERE": f"{moisture}%",
-        "GUMCONTENTHERE": f"{gum}%",
-        "PROTEINHERE": f"{protein}%",
-        "ASHHERE": f"{ash}%",
-        "AIRHERE": f"{air}%",
-        "FATHERE": f"{fat}%",
-        "PHHERE": ph,
-        "100MESHHERE": f"{through_100}%",
-        "200MESHHERE": f"{through_200}%",
+    
+    data = {
+        "PRODUCT": product,
+        "DATE": date,
+        "BATCH_NO": batch_no,
+        "BEST_BEFORE": best_before,
+        "MOISTURE": f"{moisture}%",
+        "PH": ph,
+        "MESH_200": mesh_200,
+        "VISCOSITY_2H": viscosity_2h,
+        "VISCOSITY_24H": viscosity_24h,
+        "GUM_CONTENT": f"{gum}%",
+        "PROTEIN": f"{protein}%",
+        "ASH_CONTENT": f"{ash}%",
+        "AIR": f"{air}%",
+        "FAT": f"{fat}%"
     }
 
-    doc = load_template(uploaded_template)
-    if doc:
-        try:
-            doc.render(context)
-            output = BytesIO()
-            doc.save(output)
-            output.seek(0)
-            st.success("✅ Report generated successfully!")
-            st.download_button("📥 Download DOCX", output, file_name=f"{batch_no}_report.docx")
-        except Exception as e:
-            st.error(f"⚠️ Error rendering document: {e}")
-    else:
-        st.error("❌ Template not found. Please upload a valid .docx file.")
+    output_path = "generated_coa.docx"
+    template_path = "template_coa.docx"  # Ensure this is in the same folder
+    generate_docx(data, template_path, output_path)
+
+    with open(output_path, "rb") as f:
+        st.download_button("📄 Download COA", f, file_name=output_path)
