@@ -16,7 +16,7 @@ def calculate_components(moisture):
     fat = round(remaining, 2)
     return gum, protein, ash, air, fat
 
-def generate_docx(data, template_path="gpt sample for coa.docx", output_path="generated_coa.docx"):
+def generate_docx(data, template_path="template_coa.docx", output_path="generated_coa.docx"):
     doc = Document(template_path)
     for p in doc.paragraphs:
         for key, value in data.items():
