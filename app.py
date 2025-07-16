@@ -45,20 +45,20 @@ def advanced_replace_text_preserving_style(doc, replacements):
                 for para in cell.paragraphs:
                     replace_in_paragraph(para)
 
-# --- Generate the output DOCX file ---
+# --- Generate DOCX ---
 def generate_docx(data, template_path="template.docx", output_path="generated_coa.docx"):
     doc = Document(template_path)
     advanced_replace_text_preserving_style(doc, data)
     doc.save(output_path)
     return output_path
 
-# --- Convert to HTML for preview ---
+# --- Convert DOCX to HTML preview ---
 def docx_to_html(docx_path):
     with open(docx_path, "rb") as docx_file:
         result = mammoth.convert_to_html(docx_file)
         return result.value
 
-# --- Moisture-based calculation ---
+# --- Moisture-based component calculation ---
 def calculate_components(moisture):
     remaining = 100 - moisture
     gum = round(random.uniform(81, min(85, remaining - 1.5)), 2)
@@ -72,7 +72,7 @@ def calculate_components(moisture):
     fat = round(remaining, 2)
     return gum, protein, ash, air, fat
 
-# --- Streamlit UI ---
+# --- Streamlit App Starts ---
 st.set_page_config(page_title="COA Generator", layout="wide")
 st.title("🧪 COA Document Generator (Code-Based Template)")
 
@@ -118,10 +118,8 @@ if submitted:
             "FAT": f"{fat}%"
         }
 
-        # Generate the COA document
         generate_docx(data, template_path=template_path, output_path=output_path)
 
-        # Show HTML preview
         try:
             html = docx_to_html(output_path)
             st.subheader("📄 Preview")
@@ -129,11 +127,10 @@ if submitted:
         except:
             st.warning("Preview failed. You can still download the file below.")
 
-        # Prepare renamed file
+        # Clean and rename the output file
         safe_batch = batch_no.replace("/", "_").replace("\\", "_").replace(" ", "_")
         final_filename = f"COA-{safe_batch}-{code}.docx"
 
-        # Convert to memory buffer
         with open(output_path, "rb") as f:
             doc_bytes = f.read()
         buffer = io.BytesIO(doc_bytes)
@@ -142,4 +139,5 @@ if submitted:
             label="📥 Download COA (DOCX)",
             data=buffer,
             file_name=final_filename,
-            mime="application/vnd.openxmlformats-off
+            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        )
