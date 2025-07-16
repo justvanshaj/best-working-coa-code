@@ -1,4 +1,4 @@
-<your latest app.py code will go here – too long for inline>import streamlit as st
+import streamlit as st
 from docx import Document
 import random
 import os
