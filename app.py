@@ -74,7 +74,7 @@ def calculate_components(moisture):
 
 # --- Streamlit App Starts ---
 st.set_page_config(page_title="COA Generator", layout="wide")
-st.title("🧪 COA Document Generator (Code-Based Template)")
+st.title("🧪 COA Generator")
 
 with st.form("coa_form"):
     code = st.selectbox(
