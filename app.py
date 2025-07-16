@@ -1,14 +1,16 @@
 import streamlit as st
 from docx import Document
-import random
-import os
-import mammoth
-import io
 from docx.shared import RGBColor
 from datetime import datetime
 import calendar
+import random
+import os
+import pandas as pd
+import io
+import mammoth
+import zipfile
 
-# --- Replace placeholders preserving font and color ---
+# --- Style-preserving replacement ---
 def advanced_replace_text_preserving_style(doc, replacements):
     def replace_in_paragraph(paragraph):
         runs = paragraph.runs
@@ -40,7 +42,6 @@ def advanced_replace_text_preserving_style(doc, replacements):
 
     for para in doc.paragraphs:
         replace_in_paragraph(para)
-
     for table in doc.tables:
         for row in table.rows:
             for cell in row.cells:
@@ -48,19 +49,18 @@ def advanced_replace_text_preserving_style(doc, replacements):
                     replace_in_paragraph(para)
 
 # --- Generate DOCX ---
-def generate_docx(data, template_path="template.docx", output_path="generated_coa.docx"):
+def generate_docx(data, template_path, output_path):
     doc = Document(template_path)
     advanced_replace_text_preserving_style(doc, data)
     doc.save(output_path)
-    return output_path
 
-# --- Convert DOCX to HTML preview ---
-def docx_to_html(docx_path):
-    with open(docx_path, "rb") as docx_file:
+# --- Convert DOCX to HTML ---
+def docx_to_html(path):
+    with open(path, "rb") as docx_file:
         result = mammoth.convert_to_html(docx_file)
         return result.value
 
-# --- Moisture-based component calculation ---
+# --- Moisture-based component calc ---
 def calculate_components(moisture):
     remaining = 100 - moisture
     gum = round(random.uniform(81, min(85, remaining - 1.5)), 2)
@@ -74,59 +74,53 @@ def calculate_components(moisture):
     fat = round(remaining, 2)
     return gum, protein, ash, air, fat
 
-# --- Streamlit App Starts ---
-st.set_page_config(page_title="COA Generator", layout="wide")
-st.title("🧪 COA Document Generator (Code-Based Template)")
+# --- Streamlit UI ---
+st.set_page_config("Bulk COA Generator", layout="wide")
+st.title("📥 Bulk COA Generator from Excel")
 
-with st.form("coa_form"):
-    code = st.selectbox(
-        "Select Product Code Range",
-        [f"{i}-{i+500}" for i in range(500, 10001, 500)]
-    )
-    st.info(f"📄 Using template: COA {code}.docx")
+uploaded_file = st.file_uploader("Upload Excel File", type=["xlsx"])
 
-    date = st.text_input("Date (e.g., July 2025)")
-    
-    # Auto-calculate Best Before
-    best_before = ""
-    try:
-        dt = datetime.strptime(date.strip().upper(), "%B %Y")
-        year = dt.year + 2
-        month = dt.month - 1
-        if month == 0:
-            month = 12
-            year -= 1
-        best_before = f"{calendar.month_name[month].upper()} {year}"
-        st.success(f"Best Before auto-filled: {best_before}")
-    except:
-        st.warning("Enter Date in format: July 2025")
+if uploaded_file:
+    df = pd.read_excel(uploaded_file)
+    st.success(f"Uploaded {len(df)} rows")
 
-    batch_no = st.text_input("Batch Number")
-    moisture = st.number_input("Moisture (%)", min_value=0.0, max_value=100.0, step=0.01, value=10.0)
-    ph = st.text_input("pH Level (e.g., 6.7)")
-    mesh_200 = st.text_input("200 Mesh (%)")
-    viscosity_2h = st.text_input("Viscosity After 2 Hours (CPS)")
-    viscosity_24h = st.text_input("Viscosity After 24 Hours (CPS)")
-    submitted = st.form_submit_button("Generate COA")
+    coa_files = []
+    temp_dir = "generated_coas"
+    os.makedirs(temp_dir, exist_ok=True)
 
-if submitted:
-    template_path = f"COA {code}.docx"
-    output_path = "generated_coa.docx"
+    for idx, row in df.iterrows():
+        code = str(row["Code"])
+        date = str(row["Date"])
+        batch = str(row["Batch No"])
+        moisture = float(row["Moisture"])
+        ph = str(row["pH"])
+        mesh = str(row["200 Mesh"])
+        vis2h = str(row["Viscosity 2H"])
+        vis24h = str(row["Viscosity 24H"])
 
-    if not os.path.exists(template_path):
-        st.error(f"Template file 'COA {code}.docx' not found.")
-    else:
+        # Calculate Best Before
+        try:
+            dt = datetime.strptime(date.strip(), "%B %Y")
+            year = dt.year + 2
+            month = dt.month - 1
+            if month == 0:
+                month = 12
+                year -= 1
+            best_before = f"{calendar.month_name[month].upper()} {year}"
+        except:
+            best_before = "N/A"
+
         gum, protein, ash, air, fat = calculate_components(moisture)
 
         data = {
             "DATE": date,
-            "BATCH_NO": batch_no,
+            "BATCH_NO": batch,
             "BEST_BEFORE": best_before,
             "MOISTURE": f"{moisture}%",
             "PH": ph,
-            "MESH_200": f"{mesh_200}%",
-            "VISCOSITY_2H": viscosity_2h,
-            "VISCOSITY_24H": viscosity_24h,
+            "MESH_200": f"{mesh}%",
+            "VISCOSITY_2H": vis2h,
+            "VISCOSITY_24H": vis24h,
             "GUM_CONTENT": f"{gum}%",
             "PROTEIN": f"{protein}%",
             "ASH_CONTENT": f"{ash}%",
@@ -134,26 +128,28 @@ if submitted:
             "FAT": f"{fat}%"
         }
 
-        generate_docx(data, template_path=template_path, output_path=output_path)
+        safe_batch = batch.replace("/", "_").replace("\", "_").replace(" ", "_")
+        filename = f"COA-{safe_batch}-{code}.docx"
+        template = f"COA {code}.docx"
+        output_path = os.path.join(temp_dir, filename)
 
-        try:
-            html = docx_to_html(output_path)
-            st.subheader("📄 Preview")
-            st.components.v1.html(f"<div style='padding:15px'>{html}</div>", height=700, scrolling=True)
-        except:
-            st.warning("Preview failed. You can still download the file below.")
+        if os.path.exists(template):
+            generate_docx(data, template, output_path)
+            coa_files.append(output_path)
+        else:
+            st.warning(f"Template {template} not found. Skipping row {idx+1}")
 
-        # Rename file based on batch & code
-        safe_batch = batch_no.replace("/", "_").replace("\\", "_").replace(" ", "_")
-        final_filename = f"COA-{safe_batch}-{code}.docx"
+    if coa_files:
+        st.subheader("✅ Generated COAs")
+        for path in coa_files:
+            with open(path, "rb") as f:
+                st.download_button(f"📄 Download {os.path.basename(path)}", f, file_name=os.path.basename(path))
 
-        with open(output_path, "rb") as f:
-            doc_bytes = f.read()
-        buffer = io.BytesIO(doc_bytes)
+        # Create ZIP
+        zip_path = os.path.join(temp_dir, "All_COAs.zip")
+        with zipfile.ZipFile(zip_path, "w") as zipf:
+            for f in coa_files:
+                zipf.write(f, arcname=os.path.basename(f))
 
-        st.download_button(
-            label="📥 Download COA (DOCX)",
-            data=buffer,
-            file_name=final_filename,
-            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        )
+        with open(zip_path, "rb") as z:
+            st.download_button("📦 Download All as ZIP", z, file_name="All_COAs.zip")
