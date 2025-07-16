@@ -5,7 +5,7 @@ import os
 import mammoth
 from docx.shared import RGBColor
 
-# --- Replace placeholders with style preservation ---
+# --- Replace placeholders preserving style (color, font, etc.) ---
 def advanced_replace_text_preserving_style(doc, replacements):
     def replace_in_paragraph(paragraph):
         runs = paragraph.runs
@@ -44,20 +44,20 @@ def advanced_replace_text_preserving_style(doc, replacements):
                 for para in cell.paragraphs:
                     replace_in_paragraph(para)
 
-# --- Generate filled DOCX file ---
+# --- Generate DOCX ---
 def generate_docx(data, template_path="template.docx", output_path="generated_coa.docx"):
     doc = Document(template_path)
     advanced_replace_text_preserving_style(doc, data)
     doc.save(output_path)
     return output_path
 
-# --- Convert DOCX to HTML preview ---
+# --- Convert DOCX to HTML ---
 def docx_to_html(docx_path):
     with open(docx_path, "rb") as docx_file:
         result = mammoth.convert_to_html(docx_file)
         return result.value
 
-# --- Calculate component values based on moisture ---
+# --- Moisture-based calculation ---
 def calculate_components(moisture):
     remaining = 100 - moisture
     gum = round(random.uniform(81, min(85, remaining - 1.5)), 2)
@@ -71,7 +71,7 @@ def calculate_components(moisture):
     fat = round(remaining, 2)
     return gum, protein, ash, air, fat
 
-# --- Streamlit UI ---
+# --- UI Starts ---
 st.set_page_config(page_title="COA Generator", layout="wide")
 st.title("🧪 COA Document Generator (Code-Based Template)")
 
@@ -117,10 +117,8 @@ if submitted:
             "FAT": f"{fat}%"
         }
 
-        # Generate document
         generate_docx(data, template_path=template_path, output_path=output_path)
 
-        # Preview
         try:
             html = docx_to_html(output_path)
             st.subheader("📄 Preview")
@@ -128,6 +126,9 @@ if submitted:
         except:
             st.warning("Preview failed. You can still download the file below.")
 
-        # Download
+        # Final filename
+        safe_batch = batch_no.replace("/", "_").replace("\\", "_").replace(" ", "_")
+        final_filename = f"COA-{safe_batch}-{code}.docx"
+
         with open(output_path, "rb") as file:
-            st.download_button("📥 Download COA (DOCX)", file, file_name="COA_Generated.docx")
+            st.download_button("📥 Download COA (DOCX)", file, file_name=final_filename)
