@@ -3,44 +3,58 @@ from docx import Document
 import random
 import os
 import mammoth
+from docx.shared import RGBColor
 
-# --- Replaces placeholders across styled runs, preserving format ---
-def replace_text_format_preserved(doc, replacements):
-    def replace_in_runs(runs, replacements):
+# --- Advanced placeholder replacement with full font/color preservation ---
+def advanced_replace_text_preserving_style(doc, replacements):
+    for para in doc.paragraphs:
+        runs = para.runs
         full_text = ''.join(run.text for run in runs)
         for key, value in replacements.items():
             placeholder = f"{{{{{key}}}}}"
             if placeholder in full_text:
-                full_text = full_text.replace(placeholder, str(value))
+                new_runs = []
+                accumulated = ""
                 for run in runs:
-                    run.text = ''
-                if runs:
-                    runs[0].text = full_text
-                break
-
-    for para in doc.paragraphs:
-        replace_in_runs(para.runs, replacements)
+                    accumulated += run.text
+                    new_runs.append(run)
+                    if placeholder in accumulated:
+                        style_run = next((r for r in new_runs if placeholder in r.text), new_runs[0])
+                        font = style_run.font
+                        accumulated = accumulated.replace(placeholder, value)
+                        for r in new_runs:
+                            r.text = ''
+                        if new_runs:
+                            new_run = new_runs[0]
+                            new_run.text = accumulated
+                            new_run.font.name = font.name
+                            new_run.font.size = font.size
+                            new_run.font.bold = font.bold
+                            new_run.font.italic = font.italic
+                            new_run.font.underline = font.underline
+                            new_run.font.color.rgb = font.color.rgb
+                        break
 
     for table in doc.tables:
         for row in table.rows:
             for cell in row.cells:
                 for para in cell.paragraphs:
-                    replace_in_runs(para.runs, replacements)
+                    advanced_replace_text_preserving_style(doc, replacements)
 
-# --- Generates the output COA .docx ---
+# --- DOCX Generation ---
 def generate_docx(data, template_path="template.docx", output_path="generated_coa.docx"):
     doc = Document(template_path)
-    replace_text_format_preserved(doc, data)
+    advanced_replace_text_preserving_style(doc, data)
     doc.save(output_path)
     return output_path
 
-# --- Optional HTML preview using mammoth ---
+# --- Convert docx to preview HTML ---
 def docx_to_html(docx_path):
     with open(docx_path, "rb") as docx_file:
         result = mammoth.convert_to_html(docx_file)
         return result.value
 
-# --- Component calculations based on moisture ---
+# --- Auto-calculate components ---
 def calculate_components(moisture):
     remaining = 100 - moisture
     gum = round(random.uniform(81, min(85, remaining - 1.5)), 2)
@@ -54,7 +68,7 @@ def calculate_components(moisture):
     fat = round(remaining, 2)
     return gum, protein, ash, air, fat
 
-# --- UI Starts ---
+# --- Streamlit UI ---
 st.set_page_config(page_title="COA Generator", layout="wide")
 st.title("🧪 COA Document Generator (Code-Based Template)")
 
@@ -63,6 +77,8 @@ with st.form("coa_form"):
         "Select Product Code Range",
         [f"{i}-{i+500}" for i in range(500, 10001, 500)]
     )
+    st.info(f"📄 Using template: COA {code}.docx")
+
     date = st.text_input("Date (e.g., JULY 2025)")
     batch_no = st.text_input("Batch Number")
     best_before = st.text_input("Best Before (e.g., JULY 2027)")
@@ -74,42 +90,41 @@ with st.form("coa_form"):
     submitted = st.form_submit_button("Generate COA")
 
 if submitted:
-    try:
-        # Ensure template exists
-        template_path = f"COA {code}.docx"
-        if not os.path.exists(template_path):
-            st.error(f"Template file 'COA {code}.docx' not found!")
-        else:
-            gum, protein, ash, air, fat = calculate_components(moisture)
+    template_path = f"COA {code}.docx"
+    output_path = "generated_coa.docx"
 
-            data = {
-                "DATE": date,
-                "BATCH_NO": batch_no,
-                "BEST_BEFORE": best_before,
-                "MOISTURE": f"{moisture}%",
-                "PH": ph,
-                "MESH_200": f"{mesh_200}%",
-                "VISCOSITY_2H": viscosity_2h,
-                "VISCOSITY_24H": viscosity_24h,
-                "GUM_CONTENT": f"{gum}%",
-                "PROTEIN": f"{protein}%",
-                "ASH_CONTENT": f"{ash}%",
-                "AIR": f"{air}%",
-                "FAT": f"{fat}%"
-            }
+    if not os.path.exists(template_path):
+        st.error(f"Template file 'COA {code}.docx' not found.")
+    else:
+        gum, protein, ash, air, fat = calculate_components(moisture)
 
-            output_path = "generated_coa.docx"
-            generate_docx(data, template_path=template_path, output_path=output_path)
+        data = {
+            "DATE": date,
+            "BATCH_NO": batch_no,
+            "BEST_BEFORE": best_before,
+            "MOISTURE": f"{moisture}%",
+            "PH": ph,
+            "MESH_200": f"{mesh_200}%",
+            "VISCOSITY_2H": viscosity_2h,
+            "VISCOSITY_24H": viscosity_24h,
+            "GUM_CONTENT": f"{gum}%",
+            "PROTEIN": f"{protein}%",
+            "ASH_CONTENT": f"{ash}%",
+            "AIR": f"{air}%",
+            "FAT": f"{fat}%"
+        }
 
-            # Preview
-            try:
-                html = docx_to_html(output_path)
-                st.subheader("📄 Preview")
-                st.components.v1.html(f"<div style='padding:15px'>{html}</div>", height=700, scrolling=True)
-            except:
-                st.warning("Preview failed. You can still download the file below.")
+        # Generate document
+        generate_docx(data, template_path=template_path, output_path=output_path)
 
-            with open(output_path, "rb") as file:
-                st.download_button("📥 Download COA (DOCX)", file, file_name="COA_Generated.docx")
-    except Exception as e:
-        st.error(f"❌ Error: {str(e)}")
+        # Preview
+        try:
+            html = docx_to_html(output_path)
+            st.subheader("📄 Preview")
+            st.components.v1.html(f"<div style='padding:15px'>{html}</div>", height=700, scrolling=True)
+        except:
+            st.warning("Preview failed. You can still download the file below.")
+
+        # Download button
+        with open(output_path, "rb") as file:
+            st.download_button("📥 Download COA (DOCX)", file, file_name="COA_Generated.docx")
