@@ -4,3 +4,8 @@ mammoth
 docx2pdf
 pdf2image
 Pillow
+streamlit
+python-docx
+pandas
+openpyxl
+mammoth
