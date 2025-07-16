@@ -5,6 +5,8 @@ import os
 import mammoth
 import io
 from docx.shared import RGBColor
+from datetime import datetime
+import calendar
 
 # --- Replace placeholders preserving font and color ---
 def advanced_replace_text_preserving_style(doc, replacements):
@@ -74,7 +76,7 @@ def calculate_components(moisture):
 
 # --- Streamlit App Starts ---
 st.set_page_config(page_title="COA Generator", layout="wide")
-st.title("🧪 COA Generator")
+st.title("🧪 COA Document Generator (Code-Based Template)")
 
 with st.form("coa_form"):
     code = st.selectbox(
@@ -83,9 +85,23 @@ with st.form("coa_form"):
     )
     st.info(f"📄 Using template: COA {code}.docx")
 
-    date = st.text_input("Date (e.g., JULY 2025)")
+    date = st.text_input("Date (e.g., July 2025)")
+    
+    # Auto-calculate Best Before
+    best_before = ""
+    try:
+        dt = datetime.strptime(date.strip().upper(), "%B %Y")
+        year = dt.year + 2
+        month = dt.month - 1
+        if month == 0:
+            month = 12
+            year -= 1
+        best_before = f"{calendar.month_name[month].upper()} {year}"
+        st.success(f"Best Before auto-filled: {best_before}")
+    except:
+        st.warning("Enter Date in format: July 2025")
+
     batch_no = st.text_input("Batch Number")
-    best_before = st.text_input("Best Before (e.g., JULY 2027)")
     moisture = st.number_input("Moisture (%)", min_value=0.0, max_value=100.0, step=0.01, value=10.0)
     ph = st.text_input("pH Level (e.g., 6.7)")
     mesh_200 = st.text_input("200 Mesh (%)")
@@ -127,7 +143,7 @@ if submitted:
         except:
             st.warning("Preview failed. You can still download the file below.")
 
-        # Clean and rename the output file
+        # Rename file based on batch & code
         safe_batch = batch_no.replace("/", "_").replace("\\", "_").replace(" ", "_")
         final_filename = f"COA-{safe_batch}-{code}.docx"
 
