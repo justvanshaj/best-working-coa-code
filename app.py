@@ -10,7 +10,7 @@ import io
 import mammoth
 import zipfile
 
-# --- Style-preserving replacement ---
+# --- Style-preserving text replacement ---
 def advanced_replace_text_preserving_style(doc, replacements):
     def replace_in_paragraph(paragraph):
         runs = paragraph.runs
@@ -48,19 +48,19 @@ def advanced_replace_text_preserving_style(doc, replacements):
                 for para in cell.paragraphs:
                     replace_in_paragraph(para)
 
-# --- Generate DOCX ---
+# --- Generate DOCX file ---
 def generate_docx(data, template_path, output_path):
     doc = Document(template_path)
     advanced_replace_text_preserving_style(doc, data)
     doc.save(output_path)
 
-# --- Convert DOCX to HTML ---
+# --- Convert DOCX to HTML for preview ---
 def docx_to_html(path):
     with open(path, "rb") as docx_file:
         result = mammoth.convert_to_html(docx_file)
         return result.value
 
-# --- Moisture-based component calc ---
+# --- Calculate components from moisture ---
 def calculate_components(moisture):
     remaining = 100 - moisture
     gum = round(random.uniform(81, min(85, remaining - 1.5)), 2)
@@ -82,70 +82,81 @@ uploaded_file = st.file_uploader("Upload Excel File", type=["xlsx"])
 
 if uploaded_file:
     df = pd.read_excel(uploaded_file)
-    st.success(f"Uploaded {len(df)} rows")
+    st.success(f"✅ Uploaded {len(df)} row(s)")
 
     coa_files = []
     temp_dir = "generated_coas"
     os.makedirs(temp_dir, exist_ok=True)
 
     for idx, row in df.iterrows():
-        code = str(row["Code"])
-        date = str(row["Date"])
-        batch = str(row["Batch No"])
-        moisture = float(row["Moisture"])
-        ph = str(row["pH"])
-        mesh = str(row["200 Mesh"])
-        vis2h = str(row["Viscosity 2H"])
-        vis24h = str(row["Viscosity 24H"])
-
-        # Calculate Best Before
         try:
-            dt = datetime.strptime(date.strip(), "%B %Y")
-            year = dt.year + 2
-            month = dt.month - 1
-            if month == 0:
-                month = 12
-                year -= 1
-            best_before = f"{calendar.month_name[month].upper()} {year}"
-        except:
-            best_before = "N/A"
+            code = str(row["Code"]).strip()
+            date = str(row["Date"]).strip()
+            batch = str(row["Batch No"]).strip()
+            moisture = float(row["Moisture"])
+            ph = str(row["pH"]).strip()
+            mesh = str(row["200 Mesh"]).strip()
+            vis2h = str(row["Viscosity 2H"]).strip()
+            vis24h = str(row["Viscosity 24H"]).strip()
 
-        gum, protein, ash, air, fat = calculate_components(moisture)
+            # Calculate Best Before
+            try:
+                dt = datetime.strptime(date.strip(), "%B %Y")
+                year = dt.year + 2
+                month = dt.month - 1
+                if month == 0:
+                    month = 12
+                    year -= 1
+                best_before = f"{calendar.month_name[month].upper()} {year}"
+            except:
+                best_before = "N/A"
 
-        data = {
-            "DATE": date,
-            "BATCH_NO": batch,
-            "BEST_BEFORE": best_before,
-            "MOISTURE": f"{moisture}%",
-            "PH": ph,
-            "MESH_200": f"{mesh}%",
-            "VISCOSITY_2H": vis2h,
-            "VISCOSITY_24H": vis24h,
-            "GUM_CONTENT": f"{gum}%",
-            "PROTEIN": f"{protein}%",
-            "ASH_CONTENT": f"{ash}%",
-            "AIR": f"{air}%",
-            "FAT": f"{fat}%"
-        }
+            gum, protein, ash, air, fat = calculate_components(moisture)
 
-        safe_batch = batch.replace("/", "_").replace("\", "_").replace(" ", "_")
-        filename = f"COA-{safe_batch}-{code}.docx"
-        template = f"COA {code}.docx"
-        output_path = os.path.join(temp_dir, filename)
+            data = {
+                "DATE": date,
+                "BATCH_NO": batch,
+                "BEST_BEFORE": best_before,
+                "MOISTURE": f"{moisture}%",
+                "PH": ph,
+                "MESH_200": f"{mesh}%",
+                "VISCOSITY_2H": vis2h,
+                "VISCOSITY_24H": vis24h,
+                "GUM_CONTENT": f"{gum}%",
+                "PROTEIN": f"{protein}%",
+                "ASH_CONTENT": f"{ash}%",
+                "AIR": f"{air}%",
+                "FAT": f"{fat}%"
+            }
 
-        if os.path.exists(template):
-            generate_docx(data, template, output_path)
-            coa_files.append(output_path)
-        else:
-            st.warning(f"Template {template} not found. Skipping row {idx+1}")
+            safe_batch = batch.replace("/", "_").replace("\\", "_").replace(" ", "_")
+            filename = f"COA-{safe_batch}-{code}.docx"
+            template = f"COA {code}.docx"
+            output_path = os.path.join(temp_dir, filename)
+
+            if os.path.exists(template):
+                generate_docx(data, template, output_path)
+                coa_files.append(output_path)
+                st.success(f"✅ Generated: {filename}")
+            else:
+                st.warning(f"⚠️ Missing template: COA {code}.docx (skipped row {idx+1})")
+
+        except Exception as e:
+            st.error(f"❌ Error processing row {idx+1}: {str(e)}")
 
     if coa_files:
-        st.subheader("✅ Generated COAs")
+        st.subheader("📄 Download Generated COAs")
+
         for path in coa_files:
             with open(path, "rb") as f:
-                st.download_button(f"📄 Download {os.path.basename(path)}", f, file_name=os.path.basename(path))
+                st.download_button(
+                    label=f"⬇️ Download {os.path.basename(path)}",
+                    data=f,
+                    file_name=os.path.basename(path),
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                )
 
-        # Create ZIP
+        # ZIP all files
         zip_path = os.path.join(temp_dir, "All_COAs.zip")
         with zipfile.ZipFile(zip_path, "w") as zipf:
             for f in coa_files:
