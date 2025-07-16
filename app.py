@@ -5,10 +5,10 @@ import os
 import mammoth
 from docx.shared import RGBColor
 
-# --- Advanced placeholder replacement with full font/color preservation ---
+# --- Replace placeholders with style preservation ---
 def advanced_replace_text_preserving_style(doc, replacements):
-    for para in doc.paragraphs:
-        runs = para.runs
+    def replace_in_paragraph(paragraph):
+        runs = paragraph.runs
         full_text = ''.join(run.text for run in runs)
         for key, value in replacements.items():
             placeholder = f"{{{{{key}}}}}"
@@ -35,26 +35,29 @@ def advanced_replace_text_preserving_style(doc, replacements):
                             new_run.font.color.rgb = font.color.rgb
                         break
 
+    for para in doc.paragraphs:
+        replace_in_paragraph(para)
+
     for table in doc.tables:
         for row in table.rows:
             for cell in row.cells:
                 for para in cell.paragraphs:
-                    advanced_replace_text_preserving_style(doc, replacements)
+                    replace_in_paragraph(para)
 
-# --- DOCX Generation ---
+# --- Generate filled DOCX file ---
 def generate_docx(data, template_path="template.docx", output_path="generated_coa.docx"):
     doc = Document(template_path)
     advanced_replace_text_preserving_style(doc, data)
     doc.save(output_path)
     return output_path
 
-# --- Convert docx to preview HTML ---
+# --- Convert DOCX to HTML preview ---
 def docx_to_html(docx_path):
     with open(docx_path, "rb") as docx_file:
         result = mammoth.convert_to_html(docx_file)
         return result.value
 
-# --- Auto-calculate components ---
+# --- Calculate component values based on moisture ---
 def calculate_components(moisture):
     remaining = 100 - moisture
     gum = round(random.uniform(81, min(85, remaining - 1.5)), 2)
@@ -125,6 +128,6 @@ if submitted:
         except:
             st.warning("Preview failed. You can still download the file below.")
 
-        # Download button
+        # Download
         with open(output_path, "rb") as file:
             st.download_button("📥 Download COA (DOCX)", file, file_name="COA_Generated.docx")
