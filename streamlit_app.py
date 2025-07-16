@@ -2,10 +2,9 @@ import streamlit as st
 from docx import Document
 import random
 import os
-from io import BytesIO
 import mammoth
 
-# --- Format-preserving placeholder replacement (even across runs) ---
+# --- Replaces placeholders across styled runs, preserving format ---
 def replace_text_format_preserved(doc, replacements):
     def replace_in_runs(runs, replacements):
         full_text = ''.join(run.text for run in runs)
@@ -28,20 +27,20 @@ def replace_text_format_preserved(doc, replacements):
                 for para in cell.paragraphs:
                     replace_in_runs(para.runs, replacements)
 
-# --- COA DOCX Generator ---
-def generate_docx(data, template_path="COA SAMPLE GPT.docx", output_path="generated_coa.docx"):
+# --- Generates the output COA .docx ---
+def generate_docx(data, template_path="template.docx", output_path="generated_coa.docx"):
     doc = Document(template_path)
     replace_text_format_preserved(doc, data)
     doc.save(output_path)
     return output_path
 
-# --- Optional preview using mammoth (HTML conversion of .docx) ---
+# --- Optional HTML preview using mammoth ---
 def docx_to_html(docx_path):
     with open(docx_path, "rb") as docx_file:
         result = mammoth.convert_to_html(docx_file)
         return result.value
 
-# --- Calculation logic ---
+# --- Component calculations based on moisture ---
 def calculate_components(moisture):
     remaining = 100 - moisture
     gum = round(random.uniform(81, min(85, remaining - 1.5)), 2)
@@ -57,13 +56,16 @@ def calculate_components(moisture):
 
 # --- UI Starts ---
 st.set_page_config(page_title="COA Generator", layout="wide")
-st.title("🧪 COA Document Generator with Formatting & Live Preview")
+st.title("🧪 COA Document Generator (Code-Based Template)")
 
 with st.form("coa_form"):
-    product = st.text_input("Product Name", "GUAR GUM POWDER 5500-6000 (CPS)")
-    date = st.text_input("Date (e.g., July 2025)")
+    code = st.selectbox(
+        "Select Product Code Range",
+        [f"{i}-{i+500}" for i in range(500, 10001, 500)]
+    )
+    date = st.text_input("Date (e.g., JULY 2025)")
     batch_no = st.text_input("Batch Number")
-    best_before = st.text_input("Best Before (e.g., July 2027)")
+    best_before = st.text_input("Best Before (e.g., JULY 2027)")
     moisture = st.number_input("Moisture (%)", min_value=0.0, max_value=100.0, step=0.01, value=10.0)
     ph = st.text_input("pH Level (e.g., 6.7)")
     mesh_200 = st.text_input("200 Mesh (%)")
@@ -72,38 +74,42 @@ with st.form("coa_form"):
     submitted = st.form_submit_button("Generate COA")
 
 if submitted:
-    gum, protein, ash, air, fat = calculate_components(moisture)
-
-    data = {
-        "PRODUCT": product,
-        "DATE": date,
-        "BATCH_NO": batch_no,
-        "BEST_BEFORE": best_before,
-        "MOISTURE": f"{moisture}%",
-        "PH": ph,
-        "MESH_200": mesh_200,
-        "VISCOSITY_2H": viscosity_2h,
-        "VISCOSITY_24H": viscosity_24h,
-        "GUM_CONTENT": f"{gum}%",
-        "PROTEIN": f"{protein}%",
-        "ASH_CONTENT": f"{ash}%",
-        "AIR": f"{air}%",
-        "FAT": f"{fat}%"
-    }
-
-    template_path = "COA SAMPLE GPT.docx"
-    output_path = "generated_coa.docx"
-
-    generate_docx(data, template_path=template_path, output_path=output_path)
-
-    # Preview (HTML render)
     try:
-        html = docx_to_html(output_path)
-        st.subheader("📄 COA Preview")
-        st.components.v1.html(f"<div style='padding:15px;'>{html}</div>", height=700, scrolling=True)
-    except Exception as e:
-        st.error("Preview failed. You can still download the file.")
+        # Ensure template exists
+        template_path = f"COA {code}.docx"
+        if not os.path.exists(template_path):
+            st.error(f"Template file 'COA {code}.docx' not found!")
+        else:
+            gum, protein, ash, air, fat = calculate_components(moisture)
 
-    # Download
-    with open(output_path, "rb") as file:
-        st.download_button("📥 Download COA (DOCX)", file, file_name="COA_Generated.docx")
+            data = {
+                "DATE": date,
+                "BATCH_NO": batch_no,
+                "BEST_BEFORE": best_before,
+                "MOISTURE": f"{moisture}%",
+                "PH": ph,
+                "MESH_200": f"{mesh_200}%",
+                "VISCOSITY_2H": viscosity_2h,
+                "VISCOSITY_24H": viscosity_24h,
+                "GUM_CONTENT": f"{gum}%",
+                "PROTEIN": f"{protein}%",
+                "ASH_CONTENT": f"{ash}%",
+                "AIR": f"{air}%",
+                "FAT": f"{fat}%"
+            }
+
+            output_path = "generated_coa.docx"
+            generate_docx(data, template_path=template_path, output_path=output_path)
+
+            # Preview
+            try:
+                html = docx_to_html(output_path)
+                st.subheader("📄 Preview")
+                st.components.v1.html(f"<div style='padding:15px'>{html}</div>", height=700, scrolling=True)
+            except:
+                st.warning("Preview failed. You can still download the file below.")
+
+            with open(output_path, "rb") as file:
+                st.download_button("📥 Download COA (DOCX)", file, file_name="COA_Generated.docx")
+    except Exception as e:
+        st.error(f"❌ Error: {str(e)}")
