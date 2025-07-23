@@ -2,165 +2,112 @@ import streamlit as st
 from docx import Document
 from docx.shared import RGBColor
 from datetime import datetime
-import calendar
-import random
-import os
-import pandas as pd
-import io
 import mammoth
-import zipfile
+import io
 
-# --- Style-preserving text replacement ---
-def advanced_replace_text_preserving_style(doc, replacements):
-    def replace_in_paragraph(paragraph):
-        runs = paragraph.runs
-        full_text = ''.join(run.text for run in runs)
-        for key, value in replacements.items():
-            placeholder = f"{{{{{key}}}}}"
-            if placeholder in full_text:
-                new_runs = []
-                accumulated = ""
-                for run in runs:
-                    accumulated += run.text
-                    new_runs.append(run)
-                    if placeholder in accumulated:
-                        style_run = next((r for r in new_runs if placeholder in r.text), new_runs[0])
+# --- Placeholder replacement preserving style ---
+def replace_style(doc, mapping):
+    def proc_para(para):
+        runs = para.runs
+        text = ''.join(r.text for r in runs)
+        for key, val in mapping.items():
+            placeholder = f"{{{{ {key} }}}}"
+            if placeholder in text:
+                new_runs = []; acc = ""
+                for r in runs:
+                    acc += r.text; new_runs.append(r)
+                    if placeholder in acc:
+                        style_run = next((x for x in new_runs if placeholder in x.text), new_runs[0])
                         font = style_run.font
-                        accumulated = accumulated.replace(placeholder, value)
-                        for r in new_runs:
-                            r.text = ''
-                        if new_runs:
-                            new_run = new_runs[0]
-                            new_run.text = accumulated
-                            new_run.font.name = font.name
-                            new_run.font.size = font.size
-                            new_run.font.bold = font.bold
-                            new_run.font.italic = font.italic
-                            new_run.font.underline = font.underline
-                            new_run.font.color.rgb = font.color.rgb
+                        acc = acc.replace(placeholder, str(val))
+                        for x in new_runs: x.text = ""
+                        nr = new_runs[0]
+                        nr.text = acc
+                        nr.font.name = font.name; nr.font.size = font.size
+                        nr.font.bold = font.bold; nr.font.italic = font.italic
+                        nr.font.underline = font.underline
+                        nr.font.color.rgb = font.color.rgb
                         break
 
-    for para in doc.paragraphs:
-        replace_in_paragraph(para)
-    for table in doc.tables:
-        for row in table.rows:
+    for p in doc.paragraphs: proc_para(p)
+    for tbl in doc.tables:
+        for row in tbl.rows:
             for cell in row.cells:
-                for para in cell.paragraphs:
-                    replace_in_paragraph(para)
+                for p in cell.paragraphs:
+                    proc_para(p)
 
-# --- Generate DOCX file ---
-def generate_docx(data, template_path, output_path):
-    doc = Document(template_path)
-    advanced_replace_text_preserving_style(doc, data)
-    doc.save(output_path)
+# --- Generate docx from template ---
+def gen_doc(data, tpl, out):
+    doc = Document(tpl)
+    replace_style(doc, data)
+    doc.save(out)
 
-# --- Convert DOCX to HTML for preview ---
+# --- Preview converter ---
 def docx_to_html(path):
-    with open(path, "rb") as docx_file:
-        result = mammoth.convert_to_html(docx_file)
-        return result.value
-
-# --- Calculate components from moisture ---
-def calculate_components(moisture):
-    remaining = 100 - moisture
-    gum = round(random.uniform(81, min(85, remaining - 1.5)), 2)
-    remaining -= gum
-    protein = round(min(5, remaining * 0.2), 2)
-    remaining -= protein
-    ash = round(min(1, remaining * 0.2), 2)
-    remaining -= ash
-    air = round(min(6, remaining * 0.5), 2)
-    remaining -= air
-    fat = round(remaining, 2)
-    return gum, protein, ash, air, fat
+    with open(path, "rb") as f:
+        return mammoth.convert_to_html(f).value
 
 # --- Streamlit UI ---
-st.set_page_config("Bulk COA Generator", layout="wide")
-st.title("📥 Bulk COA Generator from Excel")
+st.set_page_config("Salary Slip Generator", layout="wide")
+st.title("💼 Salary Slip Generator")
 
-uploaded_file = st.file_uploader("Upload Excel File", type=["xlsx"])
+with st.form("slip"):
+    name = st.text_input("Name")
+    desig = st.text_input("Designation")
+    dept = st.text_input("Department")
 
-if uploaded_file:
-    df = pd.read_excel(uploaded_file)
-    st.success(f"✅ Uploaded {len(df)} row(s)")
+    total_days = st.number_input("Total Days", min_value=0, value=30)
+    working = st.number_input("Working Days", min_value=0, value=30)
+    weekly_off = st.number_input("Weekly Off", min_value=0, value=4)
+    fest_off = st.number_input("Festival Off", min_value=0, value=1)
+    paid_days = st.number_input("Paid Days", min_value=0, value=total_days)
 
-    coa_files = []
-    temp_dir = "generated_coas"
-    os.makedirs(temp_dir, exist_ok=True)
+    base = st.number_input("Base Salary", min_value=0.0, value=0.0)
+    month = st.text_input("Month & Year (e.g., July 2025)")
+    salary = st.number_input("Salary", min_value=0.0, value=0.0)
+    bonus = st.number_input("Bonus", min_value=0.0, value=0.0)
+    other = st.number_input("Other Allowance", min_value=0.0, value=0.0)
 
-    for idx, row in df.iterrows():
-        try:
-            code = str(row["Code"]).strip()
-            date = str(row["Date"]).strip()
-            batch = str(row["Batch No"]).strip()
-            moisture = float(row["Moisture"])
-            ph = str(row["pH"]).strip()
-            mesh = str(row["200 Mesh"]).strip()
-            vis2h = str(row["Viscosity 2H"]).strip()
-            vis24h = str(row["Viscosity 24H"]).strip()
+    esi = st.number_input("ESI Deducted", min_value=0.0, value=0.0)
+    adv_ded = st.number_input("Advance Deducted", min_value=0.0, value=0.0)
+    adv_till = st.number_input("Advance Till Date", min_value=0.0, value=0.0)
+    misc = st.number_input("Misc Deduction", min_value=0.0, value=0.0)
 
-            # Calculate Best Before
-            try:
-                dt = datetime.strptime(date.strip(), "%B %Y")
-                year = dt.year + 2
-                month = dt.month - 1
-                if month == 0:
-                    month = 12
-                    year -= 1
-                best_before = f"{calendar.month_name[month].upper()} {year}"
-            except:
-                best_before = "N/A"
+    submitted = st.form_submit_button("Generate Salary Slip")
 
-            gum, protein, ash, air, fat = calculate_components(moisture)
+if submitted:
+    total = salary + bonus + other
+    net_adv = adv_till - adv_ded
+    payable = total - (esi + adv_ded + misc)
+    pay_date = datetime.now().strftime("%B %Y")
 
-            data = {
-                "DATE": date,
-                "BATCH_NO": batch,
-                "BEST_BEFORE": best_before,
-                "MOISTURE": f"{moisture}%",
-                "PH": ph,
-                "MESH_200": f"{mesh}%",
-                "VISCOSITY_2H": vis2h,
-                "VISCOSITY_24H": vis24h,
-                "GUM_CONTENT": f"{gum}%",
-                "PROTEIN": f"{protein}%",
-                "ASH_CONTENT": f"{ash}%",
-                "AIR": f"{air}%",
-                "FAT": f"{fat}%"
-            }
+    data = {
+        "Name": name, "Designation": desig, "Department": dept,
+        "Total_Days": total_days, "Working_Days": working,
+        "Weekly_Off": weekly_off, "Festival_Off": fest_off,
+        "Paid_Days": paid_days,
+        "Base": base, "Month": month,
+        "Salary": salary, "Bonus": bonus, "Other": other,
+        "Total": total, "Net_Advance": net_adv,
+        "Payment_Date": pay_date,
+        "ESI": esi, "Advance_Deduct": adv_ded,
+        "Advance_Till_Date": adv_till, "MISC": misc,
+        "Payable": payable
+    }
 
-            safe_batch = batch.replace("/", "_").replace("\\", "_").replace(" ", "_")
-            filename = f"COA-{safe_batch}-{code}.docx"
-            template = f"COA {code}.docx"
-            output_path = os.path.join(temp_dir, filename)
+    tpl = "SALARY SLIP FORMAT.docx"
+    out = "SALARY_SLIP_Generated.docx"
+    gen_doc(data, tpl, out)
 
-            if os.path.exists(template):
-                generate_docx(data, template, output_path)
-                coa_files.append(output_path)
-                st.success(f"✅ Generated: {filename}")
-            else:
-                st.warning(f"⚠️ Missing template: COA {code}.docx (skipped row {idx+1})")
+    try:
+        html = docx_to_html(out)
+        st.subheader("📄 Preview")
+        st.components.v1.html(html, height=600, scrolling=True)
+    except:
+        st.warning("No preview available")
 
-        except Exception as e:
-            st.error(f"❌ Error processing row {idx+1}: {str(e)}")
-
-    if coa_files:
-        st.subheader("📄 Download Generated COAs")
-
-        for path in coa_files:
-            with open(path, "rb") as f:
-                st.download_button(
-                    label=f"⬇️ Download {os.path.basename(path)}",
-                    data=f,
-                    file_name=os.path.basename(path),
-                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                )
-
-        # ZIP all files
-        zip_path = os.path.join(temp_dir, "All_COAs.zip")
-        with zipfile.ZipFile(zip_path, "w") as zipf:
-            for f in coa_files:
-                zipf.write(f, arcname=os.path.basename(f))
-
-        with open(zip_path, "rb") as z:
-            st.download_button("📦 Download All as ZIP", z, file_name="All_COAs.zip")
+    with open(out, "rb") as f:
+        buf = io.BytesIO(f.read())
+        st.download_button("📥 Download Salary Slip", data=buf,
+                           file_name=f"SalarySlip-{name}-{month}.docx",
+                           mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
