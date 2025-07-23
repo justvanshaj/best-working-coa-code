@@ -2,7 +2,6 @@ import streamlit as st
 from docx import Document
 import datetime
 import os
-import base64
 import pandas as pd
 from io import BytesIO
 from docx2pdf import convert
@@ -32,9 +31,9 @@ def replace_placeholders(doc, replacements):
 def generate_docx(data, template_path="SALARY SLIP FORMAT.docx"):
     doc = Document(template_path)
     replace_placeholders(doc, data)
-    output_path = f"generated_slip_{data['Name'].replace(' ', '_')}.docx"
-    doc.save(output_path)
-    return output_path
+    file_name = f"salaryslip_{data['Name'].replace(' ', '_')}_{data['Month'].replace(' ', '_')}.docx"
+    doc.save(file_name)
+    return file_name
 
 # --- Convert DOCX to PDF ---
 def convert_to_pdf(docx_path):
@@ -46,12 +45,16 @@ def convert_to_pdf(docx_path):
 st.set_page_config(page_title="Salary Slip Generator", layout="wide")
 st.title("🧾 Salary Slip Generator")
 
-with st.expander("📤 Bulk COA Generator from Excel"):
-    uploaded_file = st.file_uploader("Upload Excel File", type=["xlsx"])
+if "generated_file" not in st.session_state:
+    st.session_state.generated_file = None
+    st.session_state.generated_pdf = None
+
+# --- Bulk Generator ---
+with st.expander("📤 Bulk Salary Slip Generator from Excel"):
+    uploaded_file = st.file_uploader("Upload Excel File", type=["xlsx"], key="bulk_excel")
     if uploaded_file:
         df = pd.read_excel(uploaded_file)
         st.success(f"✅ Uploaded {len(df)} row(s)")
-        generated_files = []
 
         for index, row in df.iterrows():
             name = row["Name"]
@@ -84,26 +87,29 @@ with st.expander("📤 Bulk COA Generator from Excel"):
                 "Payment_Date": payment_date,
             }
 
-            out_path = generate_docx(data)
-            st.success(f"✅ Generated: {os.path.basename(out_path)}")
-            with open(out_path, "rb") as f:
+            docx_path = generate_docx(data)
+            st.success(f"✅ Generated: {os.path.basename(docx_path)}")
+
+            with open(docx_path, "rb") as file:
                 st.download_button(
-                    label=f"📄 Download {os.path.basename(out_path)}",
-                    data=f,
-                    file_name=os.path.basename(out_path),
-                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    label=f"📄 Download DOCX - {os.path.basename(docx_path)}",
+                    data=file,
+                    file_name=os.path.basename(docx_path),
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    key=f"docx_{index}"
                 )
 
-            # PDF version
-            pdf_path = convert_to_pdf(out_path)
-            with open(pdf_path, "rb") as pdf:
+            pdf_path = convert_to_pdf(docx_path)
+            with open(pdf_path, "rb") as file:
                 st.download_button(
-                    label=f"🧾 Download PDF for {name}",
-                    data=pdf,
+                    label=f"🧾 Download PDF - {os.path.basename(pdf_path)}",
+                    data=file,
                     file_name=os.path.basename(pdf_path),
-                    mime="application/pdf"
+                    mime="application/pdf",
+                    key=f"pdf_{index}"
                 )
 
+# --- Single Form Generator ---
 st.markdown("---")
 st.header("📥 Single Salary Slip Generator")
 
@@ -128,52 +134,56 @@ with st.form("salary_form"):
 
     submitted = st.form_submit_button("Generate Salary Slip")
 
-    if submitted:
-        total = salary + bonus + other
-        net_advance = advance_till - advance_deduct
-        payable = total - (esi + advance_deduct + misc)
-        payment_date = datetime.datetime.now().strftime("%d %B %Y")
+if submitted:
+    total = salary + bonus + other
+    net_advance = advance_till - advance_deduct
+    payable = total - (esi + advance_deduct + misc)
+    payment_date = datetime.datetime.now().strftime("%d %B %Y")
 
-        data = {
-            "Name": name,
-            "Designation": designation,
-            "Department": department,
-            "Total_Days": total_days,
-            "Working_Days": working_days,
-            "Weekly_Off": weekly_off,
-            "Festival_Off": festival_off,
-            "Paid_Days": paid_days,
-            "Base": base,
-            "Month": month,
-            "Salary": salary,
-            "Bonus": bonus,
-            "Other": other,
-            "Total": total,
-            "ESI": esi,
-            "Advance_Till_Date": advance_till,
-            "Advance_Deduct": advance_deduct,
-            "Net_Advance": net_advance,
-            "MISC": misc,
-            "Payable": payable,
-            "Payment_Date": payment_date,
-        }
+    data = {
+        "Name": name,
+        "Designation": designation,
+        "Department": department,
+        "Total_Days": total_days,
+        "Working_Days": working_days,
+        "Weekly_Off": weekly_off,
+        "Festival_Off": festival_off,
+        "Paid_Days": paid_days,
+        "Base": base,
+        "Month": month,
+        "Salary": salary,
+        "Bonus": bonus,
+        "Other": other,
+        "Total": total,
+        "ESI": esi,
+        "Advance_Till_Date": advance_till,
+        "Advance_Deduct": advance_deduct,
+        "Net_Advance": net_advance,
+        "MISC": misc,
+        "Payable": payable,
+        "Payment_Date": payment_date,
+    }
 
-        out_path = generate_docx(data)
-        st.success(f"✅ Generated: {os.path.basename(out_path)}")
-        with open(out_path, "rb") as f:
-            st.download_button(
-                label="📄 Download Salary Slip (DOCX)",
-                data=f,
-                file_name=os.path.basename(out_path),
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            )
+    generated_path = generate_docx(data)
+    st.session_state.generated_file = generated_path
+    st.session_state.generated_pdf = convert_to_pdf(generated_path)
 
-        # Optional PDF
-        pdf_path = convert_to_pdf(out_path)
-        with open(pdf_path, "rb") as f:
-            st.download_button(
-                label="🧾 Download Salary Slip (PDF)",
-                data=f,
-                file_name=os.path.basename(pdf_path),
-                mime="application/pdf"
-            )
+if st.session_state.generated_file:
+    with open(st.session_state.generated_file, "rb") as f:
+        st.download_button(
+            label="📄 Download Salary Slip (DOCX)",
+            data=f,
+            file_name=os.path.basename(st.session_state.generated_file),
+            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            key="single_docx"
+        )
+
+if st.session_state.generated_pdf:
+    with open(st.session_state.generated_pdf, "rb") as f:
+        st.download_button(
+            label="🧾 Download Salary Slip (PDF)",
+            data=f,
+            file_name=os.path.basename(st.session_state.generated_pdf),
+            mime="application/pdf",
+            key="single_pdf"
+        )
