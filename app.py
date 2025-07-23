@@ -3,8 +3,6 @@ from docx import Document
 import datetime
 import os
 import pandas as pd
-from io import BytesIO
-from docx2pdf import convert
 
 # --- Replace placeholders preserving formatting ---
 def replace_placeholders(doc, replacements):
@@ -35,19 +33,12 @@ def generate_docx(data, template_path="SALARY SLIP FORMAT.docx"):
     doc.save(file_name)
     return file_name
 
-# --- Convert DOCX to PDF ---
-def convert_to_pdf(docx_path):
-    pdf_path = docx_path.replace(".docx", ".pdf")
-    convert(docx_path, pdf_path)
-    return pdf_path
-
 # --- Streamlit App ---
 st.set_page_config(page_title="Salary Slip Generator", layout="wide")
 st.title("🧾 Salary Slip Generator")
 
 if "generated_file" not in st.session_state:
     st.session_state.generated_file = None
-    st.session_state.generated_pdf = None
 
 # --- Bulk Generator ---
 with st.expander("📤 Bulk Salary Slip Generator from Excel"):
@@ -97,16 +88,6 @@ with st.expander("📤 Bulk Salary Slip Generator from Excel"):
                     file_name=os.path.basename(docx_path),
                     mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                     key=f"docx_{index}"
-                )
-
-            pdf_path = convert_to_pdf(docx_path)
-            with open(pdf_path, "rb") as file:
-                st.download_button(
-                    label=f"🧾 Download PDF - {os.path.basename(pdf_path)}",
-                    data=file,
-                    file_name=os.path.basename(pdf_path),
-                    mime="application/pdf",
-                    key=f"pdf_{index}"
                 )
 
 # --- Single Form Generator ---
@@ -166,7 +147,6 @@ if submitted:
 
     generated_path = generate_docx(data)
     st.session_state.generated_file = generated_path
-    st.session_state.generated_pdf = convert_to_pdf(generated_path)
 
 if st.session_state.generated_file:
     with open(st.session_state.generated_file, "rb") as f:
@@ -176,14 +156,4 @@ if st.session_state.generated_file:
             file_name=os.path.basename(st.session_state.generated_file),
             mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             key="single_docx"
-        )
-
-if st.session_state.generated_pdf:
-    with open(st.session_state.generated_pdf, "rb") as f:
-        st.download_button(
-            label="🧾 Download Salary Slip (PDF)",
-            data=f,
-            file_name=os.path.basename(st.session_state.generated_pdf),
-            mime="application/pdf",
-            key="single_pdf"
         )
