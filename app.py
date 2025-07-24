@@ -4,6 +4,7 @@ import datetime
 import os
 import pandas as pd
 from io import BytesIO
+import zipfile
 
 # --- Replace placeholders robustly even in tables ---
 def replace_placeholders(doc, replacements):
@@ -38,13 +39,13 @@ def generate_docx(data, template_path="SALARY SLIP FORMAT.docx"):
 
 # --- Streamlit App ---
 st.set_page_config(page_title="Salary Slip Generator", layout="wide")
-st.title("🧾 Salary Slip Generator")
+st.title("📟 Salary Slip Generator")
 
 if "generated_file" not in st.session_state:
     st.session_state.generated_file = None
 
 # --- Bulk Generator ---
-with st.expander("📤 Bulk Salary Slip Generator from Excel"):
+with st.expander("📄 Bulk Salary Slip Generator from Excel"):
     uploaded_file = st.file_uploader("Upload Excel File", type=["xlsx"], key="bulk_excel")
     if uploaded_file:
         df = pd.read_excel(uploaded_file)
@@ -95,7 +96,7 @@ with st.expander("📤 Bulk Salary Slip Generator from Excel"):
 
 # --- Single Form Generator ---
 st.markdown("---")
-st.header("📥 Single Salary Slip Generator")
+st.header("📅 Single Salary Slip Generator")
 
 with st.form("salary_form"):
     name = st.text_input("Name")
@@ -159,4 +160,24 @@ if st.session_state.generated_file:
             file_name=os.path.basename(st.session_state.generated_file),
             mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             key="single_docx"
+        )
+
+# --- Zip Download Option ---
+st.markdown("---")
+st.header("📆 Download All Generated Slips as ZIP")
+
+if st.button("📁 Create and Download ZIP"):
+    zip_path = "generated_salary_slips.zip"
+    with zipfile.ZipFile(zip_path, "w") as zipf:
+        for file in os.listdir():
+            if file.startswith("salaryslip_") and file.endswith(".docx"):
+                zipf.write(file)
+
+    with open(zip_path, "rb") as zipf:
+        st.download_button(
+            label="⬇️ Download ZIP File",
+            data=zipf,
+            file_name="generated_salary_slips.zip",
+            mime="application/zip",
+            key="zip_download"
         )
