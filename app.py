@@ -3,27 +3,30 @@ from docx import Document
 import datetime
 import os
 import pandas as pd
+from io import BytesIO
 
-# --- Replace placeholders preserving formatting ---
+# --- Replace placeholders robustly even in tables ---
 def replace_placeholders(doc, replacements):
-    for p in doc.paragraphs:
+    import re
+    pattern = re.compile(r"{{(.*?)}}")
+
+    def replace_in_paragraph(paragraph):
+        full_text = "".join(run.text for run in paragraph.runs)
         for key, val in replacements.items():
-            if f"{{{{{key}}}}}" in p.text:
-                inline = p.runs
-                for i in range(len(inline)):
-                    if f"{{{{{key}}}}}" in inline[i].text:
-                        inline[i].text = inline[i].text.replace(f"{{{{{key}}}}}", str(val))
+            full_text = full_text.replace(f"{{{{{key}}}}}", str(val))
+        paragraph.clear()
+        paragraph.add_run(full_text)
+
+    for p in doc.paragraphs:
+        if pattern.search(p.text):
+            replace_in_paragraph(p)
 
     for table in doc.tables:
         for row in table.rows:
             for cell in row.cells:
                 for p in cell.paragraphs:
-                    for key, val in replacements.items():
-                        if f"{{{{{key}}}}}" in p.text:
-                            inline = p.runs
-                            for i in range(len(inline)):
-                                if f"{{{{{key}}}}}" in inline[i].text:
-                                    inline[i].text = inline[i].text.replace(f"{{{{{key}}}}}", str(val))
+                    if pattern.search(p.text):
+                        replace_in_paragraph(p)
 
 # --- Generate DOCX ---
 def generate_docx(data, template_path="SALARY SLIP FORMAT.docx"):
