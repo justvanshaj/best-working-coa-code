@@ -14,7 +14,7 @@ with st.sidebar:
     temperature = st.slider("Temperature (°C)", 20, 100, 30)
     ph = st.slider("pH Level", 1.0, 14.0, 7.0)
     mix_time = st.slider("Mixing Time (minutes)", 1, 120, 10)
-    rpm = st.slider("Stirring Speed (RPM)", 0, 1000, 250)
+    rpm = st.slider("Stirring Speed (RPM)", 0, 2000, 250)
 
 if st.button("Simulate Reaction"):
     result = simulate_guar_behavior(grade, chemical, concentration, temperature, ph, mix_time, rpm)
