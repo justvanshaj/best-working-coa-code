@@ -1,27 +1,22 @@
-def simulate_guar_behavior(grade, chemical, conc, temp, ph, time, rpm):
-    import numpy as np
+def run_simulation(powder_weight, powder_mesh, moisture, rpm, mixer_size,
+                     water_qty, split_daal_qty, chemicals, method, viscometer):
 
-    time_points = list(range(0, time+1, 5))
-    base = 1000
+    chemical_effect = sum(c["weight"] for c in chemicals)
+    mesh_factor = {"80": 0.9, "100": 1.0, "200": 1.1}[powder_mesh]
+    mixer_factor = {"Small": 0.8, "Medium": 1.0, "Large": 1.2}[mixer_size]
 
-    modifier = 1.0
-    if grade == "Fast Hydrating":
-        modifier *= 1.5
-    elif grade == "Industrial":
-        modifier *= 0.8
+    viscosity = viscometer * (1 + 0.01 * chemical_effect) * mesh_factor * mixer_factor
+    time_to_react = (powder_weight + water_qty + sum(c["weight"] for c in chemicals)/1000) / (rpm + 1)
 
-    chem_factor = {
-        "Water": 1.0,
-        "Acid": 0.7,
-        "Salt": 0.9,
-        "Borax": 1.3,
-        "CaCl₂": 0.6
-    }[chemical]
-
-    temp_effect = (temp / 25) ** 0.5
-    ph_effect = 1.0 if 6 <= ph <= 8 else 0.7
-    rpm_effect = (rpm / 300) ** 0.3
-
-    viscosity_curve = [round(base * modifier * chem_factor * temp_effect * ph_effect * rpm_effect * (1 - np.exp(-0.1*t)), 2) for t in time_points]
-
-    return {'time': time_points, 'viscosity': viscosity_curve}
+    result = {
+        "Adjusted Viscosity (cP)": round(viscosity, 2),
+        "Estimated Reaction Time (min)": round(time_to_react, 2),
+        "Powder Weight (kg)": powder_weight,
+        "Mesh Size": powder_mesh,
+        "Moisture (%)": moisture,
+        "Water (L)": water_qty,
+        "Split Daal (kg)": split_daal_qty,
+        "Chemicals Used": chemicals,
+        "Viscometer Method": method
+    }
+    return result
