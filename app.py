@@ -1,200 +1,103 @@
 import streamlit as st
 from docx import Document
-from docx.shared import RGBColor
-from datetime import datetime
-import calendar
-import random
+import datetime
 import os
-import pandas as pd
-import io
-import mammoth
-import zipfile
 
-# --- Style-preserving text replacement ---
-def advanced_replace_text_preserving_style(doc, replacements):
+# --- Replace placeholders robustly even in tables ---
+def replace_placeholders(doc, replacements):
+    import re
+    pattern = re.compile(r"{{(.*?)}}")
+
     def replace_in_paragraph(paragraph):
-        runs = paragraph.runs
-        full_text = ''.join(run.text for run in runs)
-        for key, value in replacements.items():
-            placeholder = f"{{{{{key}}}}}"
-            if placeholder in full_text:
-                new_runs = []
-                accumulated = ""
-                for run in runs:
-                    accumulated += run.text
-                    new_runs.append(run)
-                    if placeholder in accumulated:
-                        style_run = next((r for r in new_runs if placeholder in r.text), new_runs[0])
-                        font = style_run.font
-                        accumulated = accumulated.replace(placeholder, value)
-                        for r in new_runs:
-                            r.text = ''
-                        if new_runs:
-                            new_run = new_runs[0]
-                            new_run.text = accumulated
-                            new_run.font.name = font.name
-                            new_run.font.size = font.size
-                            new_run.font.bold = font.bold
-                            new_run.font.italic = font.italic
-                            new_run.font.underline = font.underline
-                            new_run.font.color.rgb = font.color.rgb
-                        break
+        full_text = "".join(run.text for run in paragraph.runs)
+        for key, val in replacements.items():
+            full_text = full_text.replace(f"{{{{{key}}}}}", str(val))
+        paragraph.clear()
+        paragraph.add_run(full_text)
 
-    for para in doc.paragraphs:
-        replace_in_paragraph(para)
+    for p in doc.paragraphs:
+        if pattern.search(p.text):
+            replace_in_paragraph(p)
+
     for table in doc.tables:
         for row in table.rows:
             for cell in row.cells:
-                for para in cell.paragraphs:
-                    replace_in_paragraph(para)
+                for p in cell.paragraphs:
+                    if pattern.search(p.text):
+                        replace_in_paragraph(p)
 
-# --- Generate DOCX file ---
-def generate_docx(data, template_path, output_path):
+# --- Generate DOCX ---
+def generate_docx(data, template_path="SALARY SLIP FORMAT.docx"):
     doc = Document(template_path)
-    advanced_replace_text_preserving_style(doc, data)
-    doc.save(output_path)
+    replace_placeholders(doc, data)
+    file_name = f"salaryslip_{data['Name'].replace(' ', '_')}_{data['Month'].replace(' ', '_')}.docx"
+    doc.save(file_name)
+    return file_name
 
-# --- Convert DOCX to HTML for preview ---
-def docx_to_html(path):
-    with open(path, "rb") as docx_file:
-        result = mammoth.convert_to_html(docx_file)
-        return result.value
+# --- Streamlit App ---
+st.set_page_config(page_title="Single Salary Slip Generator", layout="centered")
+st.title("📄 Individual Salary Slip Generator")
 
-# --- Updated: Calculate components from moisture ---
-def calculate_components(moisture):
-    total = 100
-    remaining = total - moisture
+with st.form("salary_form"):
+    st.subheader("Enter Employee Details")
 
-    gum = round(random.uniform(81, min(88, remaining - 1.5)), 2)
-    remaining -= gum
+    name = st.text_input("Name")
+    designation = st.text_input("Designation")
+    department = st.text_input("Department")
+    total_days = st.number_input("Total Days", min_value=0, max_value=31)
+    working_days = st.number_input("Working Days", min_value=0, max_value=31)
+    weekly_off = st.number_input("Weekly Off", min_value=0, max_value=10)
+    festival_off = st.number_input("Festival Off", min_value=0, max_value=10)
+    paid_days = st.number_input("Paid Days", min_value=0, max_value=31)
+    base = st.number_input("Base Salary", min_value=0.0)
+    month = st.text_input("Month (e.g., July 2025)")
 
-    # Initial base values
-    base_protein = min(4, remaining * 0.2)
-    base_ash = min(0.7, remaining * 0.2)
-    base_air = min(3.5, remaining * 0.5)
-    base_fat = min(0.8, remaining)
+    salary = st.number_input("Salary", min_value=0.0)
+    bonus = st.number_input("Bonus", min_value=0.0)
+    other = st.number_input("Other", min_value=0.0)
+    esi = st.number_input("ESI Deduction", min_value=0.0)
+    advance_till = st.number_input("Advance Till Date", min_value=0.0)
+    advance_deduct = st.number_input("Advance Deducted This Month", min_value=0.0)
+    misc = st.number_input("MISC Deduction", min_value=0.0)
 
-    base_total = base_protein + base_ash + base_air + base_fat
+    submitted = st.form_submit_button("Generate Salary Slip")
 
-    if round(base_total, 2) <= round(remaining, 2):
-        protein = round(base_protein, 2)
-        ash = round(base_ash, 2)
-        air = round(base_air, 2)
-        fat = round(remaining - (protein + ash + air), 2)
-        fat = min(fat, 0.8)
+if submitted:
+    total = salary + bonus + other
+    net_advance = advance_till - advance_deduct
+    payable = total - (esi + advance_deduct + misc)
+    payment_date = datetime.datetime.now().strftime("%d %B %Y")
 
-        leftover = round(remaining - (protein + ash + air + fat), 2)
-        if leftover > 0 and (protein + ash + air) > 0:
-            scale = remaining / (protein + ash + air)
-            protein = round(protein * scale, 2)
-            ash = round(ash * scale, 2)
-            air = round(air * scale, 2)
-            fat = round(remaining - (protein + ash + air), 2)
-    else:
-        scale = remaining / base_total
-        protein = round(base_protein * scale, 2)
-        ash = round(base_ash * scale, 2)
-        air = round(base_air * scale, 2)
-        fat = round(base_fat * scale, 2)
-        fat = min(fat, 0.8)
+    data = {
+        "Name": name,
+        "Designation": designation,
+        "Department": department,
+        "Total_Days": total_days,
+        "Working_Days": working_days,
+        "Weekly_Off": weekly_off,
+        "Festival_Off": festival_off,
+        "Paid_Days": paid_days,
+        "Base": base,
+        "Month": month,
+        "Salary": salary,
+        "Bonus": bonus,
+        "Other": other,
+        "Total": total,
+        "ESI": esi,
+        "Advance_Till_Date": advance_till,
+        "Advance_Deduct": advance_deduct,
+        "Net_Advance": net_advance,
+        "MISC": misc,
+        "Payable": payable,
+        "Payment_Date": payment_date,
+    }
 
-        subtotal = protein + ash + air + fat
-        if subtotal < remaining and (protein + ash + air) > 0:
-            extra = remaining - subtotal
-            protein += round(extra * (protein / (protein + ash + air)), 2)
-            ash += round(extra * (ash / (protein + ash + air)), 2)
-            air += round(extra * (air / (protein + ash + air)), 2)
-            fat = round(remaining - (protein + ash + air), 2)
+    docx_path = generate_docx(data)
 
-    return gum, protein, ash, air, fat
-
-# --- Streamlit UI ---
-st.set_page_config("Bulk COA Generator", layout="wide")
-st.title("📥 Bulk COA Generator from Excel")
-
-uploaded_file = st.file_uploader("Upload Excel File", type=["xlsx"])
-
-if uploaded_file:
-    df = pd.read_excel(uploaded_file)
-    st.success(f"✅ Uploaded {len(df)} row(s)")
-
-    coa_files = []
-    temp_dir = "generated_coas"
-    os.makedirs(temp_dir, exist_ok=True)
-
-    for idx, row in df.iterrows():
-        try:
-            code = str(row["Code"]).strip()
-            date = str(row["Date"]).strip()
-            batch = str(row["Batch No"]).strip()
-            moisture = float(row["Moisture"])
-            ph = str(row["pH"]).strip()
-            mesh = str(row["200 Mesh"]).strip()
-            vis2h = str(row["Viscosity 2H"]).strip()
-            vis24h = str(row["Viscosity 24H"]).strip()
-
-            # Calculate Best Before
-            try:
-                dt = datetime.strptime(date.strip(), "%B %Y")
-                year = dt.year + 2
-                month = dt.month - 1
-                if month == 0:
-                    month = 12
-                    year -= 1
-                best_before = f"{calendar.month_name[month].upper()} {year}"
-            except:
-                best_before = "N/A"
-
-            gum, protein, ash, air, fat = calculate_components(moisture)
-
-            data = {
-                "DATE": date,
-                "BATCH_NO": batch,
-                "BEST_BEFORE": best_before,
-                "MOISTURE": f"{moisture}%",
-                "PH": ph,
-                "MESH_200": f"{mesh}%",
-                "VISCOSITY_2H": vis2h,
-                "VISCOSITY_24H": vis24h,
-                "GUM_CONTENT": f"{gum}%",
-                "PROTEIN": f"{protein}%",
-                "ASH_CONTENT": f"{ash}%",
-                "AIR": f"{air}%",
-                "FAT": f"{fat}%"
-            }
-
-            safe_batch = batch.replace("/", "_").replace("\\", "_").replace(" ", "_")
-            filename = f"COA-{safe_batch}-{code}.docx"
-            template = f"COA {code}.docx"
-            output_path = os.path.join(temp_dir, filename)
-
-            if os.path.exists(template):
-                generate_docx(data, template, output_path)
-                coa_files.append(output_path)
-                st.success(f"✅ Generated: {filename}")
-            else:
-                st.warning(f"⚠️ Missing template: COA {code}.docx (skipped row {idx+1})")
-
-        except Exception as e:
-            st.error(f"❌ Error processing row {idx+1}: {str(e)}")
-
-    if coa_files:
-        st.subheader("📄 Download Generated COAs")
-
-        for path in coa_files:
-            with open(path, "rb") as f:
-                st.download_button(
-                    label=f"⬇️ Download {os.path.basename(path)}",
-                    data=f,
-                    file_name=os.path.basename(path),
-                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                )
-
-        # ZIP all files
-        zip_path = os.path.join(temp_dir, "All_COAs.zip")
-        with zipfile.ZipFile(zip_path, "w") as zipf:
-            for f in coa_files:
-                zipf.write(f, arcname=os.path.basename(f))
-
-        with open(zip_path, "rb") as z:
-            st.download_button("📦 Download All as ZIP", z, file_name="All_COAs.zip")
+    with open(docx_path, "rb") as f:
+        st.download_button(
+            label="📄 Download Salary Slip",
+            data=f,
+            file_name=os.path.basename(docx_path),
+            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        )
