@@ -4,6 +4,17 @@ matplotlib
 numpy
 streamlit
 python-docx
+streamlit
+python-docx
+mammoth
+docx2pdf
+pdf2image
+Pillow
+streamlit
+python-docx
+pandas
+openpyxl
+mammoth
 mammoth
 docx2pdf
 pdf2image
